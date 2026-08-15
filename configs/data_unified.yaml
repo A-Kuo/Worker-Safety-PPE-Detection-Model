@@ -1,0 +1,33 @@
+# Draft unified dataset config (YOLO format).
+#
+# STATUS: placeholder — paths are not yet populated because dataset export/merge
+# (Milestone M2 in docs/PROJECT_PLAN.md) has not run yet. Do not point a training
+# job at this file until scripts/build_unified_dataset.py exists and has been run.
+#
+# `boots`/`no_boots` are included per the target taxonomy in docs/PROJECT_PLAN.md,
+# but no confirmed source dataset for boots was found during research
+# (see docs/DATASET_NOTES.md) — may need to be dropped or sourced separately.
+
+path: ../data/unified  # populated by scripts/build_unified_dataset.py (M2)
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: helmet
+  1: no_helmet
+  2: vest
+  3: no_vest
+  4: goggles
+  5: no_goggles
+  6: gloves
+  7: no_gloves
+  8: boots
+  9: no_boots
+  10: mask
+  11: no_mask
+  12: person
+  13: machinery
+  14: vehicle
+  15: cone
+  16: ladder

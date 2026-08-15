@@ -1,0 +1,23 @@
+# Draft dependency set for the planned pipeline (docs/PROJECT_PLAN.md).
+# Not yet installed/verified in this environment — pin exact versions once
+# training actually starts (M1), since ultralytics defaults have changed
+# mAP behavior across releases.
+
+ultralytics>=8.2,<9.0
+torch>=2.1
+torchvision>=0.16
+roboflow>=1.1
+opencv-python-headless>=4.9
+numpy>=1.26
+pandas>=2.1
+matplotlib>=3.8
+scikit-learn>=1.4
+onnx>=1.16
+onnxruntime>=1.17
+fastapi>=0.111
+uvicorn>=0.30
+pillow>=10.3
+pyyaml>=6.0
+
+# Optional / stretch (M6 VLM layer) — install separately when starting M6.
+# open_clip_torch>=2.24

@@ -1,0 +1,20 @@
+# Data & model artifacts (large, dataset-license-sensitive — do not commit)
+# Anchored to repo root so it doesn't also ignore src/data/ (code, not data).
+/data/
+*.pt
+*.onnx
+runs/
+*.egg-info/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
