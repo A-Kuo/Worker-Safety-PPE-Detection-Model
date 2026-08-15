@@ -9,6 +9,14 @@ two Universe datasets are taken from cached search snippets / third-party citati
 metadata `data.yaml`) before building the unified dataset**, since Universe project
 versions can change class lists between exports.
 
+**Update (confirmed by you, 2026-08-15):** the "existing local files" project is
+**`snehilsanyal/Construction-Site-Safety-PPE-Detection`**, matching the repo already
+identified below — no change needed to the base-dataset identification. You also
+confirmed `Vinayakmane47/PPE_detection_YOLO` is a secondary reference only ("files not
+copied, less inspiration") — Section 2 and `PROJECT_PLAN.md` M5 have been downgraded
+accordingly: it's a loose pattern reference for the compliance-messaging API shape, not
+something we fork or copy structure from directly.
+
 ## 1. Base dataset — Construction Site Safety (Step 1 baseline)
 
 - Source: Roboflow Universe, `roboflow-universe-projects/construction-site-safety`.
@@ -26,16 +34,44 @@ versions can change class lists between exports.
 - Baseline training reference (independent reproduction, for plausibility-checking your
   own numbers, not as ground truth): [`Venta02/ppe-detection-yolov8`](https://github.com/Venta02/ppe-detection-yolov8)
   reports YOLOv8n → mAP@0.5 ≈ 0.733, mAP@0.5:0.95 ≈ 0.419, P ≈ 0.904, R ≈ 0.665, on the
-  114-image validation set, at a best-F1 operating threshold ≈ 0.51.
+  114-image validation set, at a best-F1 operating threshold ≈ 0.51. **The actual
+  upstream repo's own committed `results/results.csv` and plots report mAP@0.5 ≈ 0.810,
+  mAP@0.5:0.95 ≈ 0.507** at epoch 99/100 — noticeably higher than the independent
+  reproduction. Full numbers, per-class breakdown, and the source plots are now in
+  `docs/BASELINE_METRICS.md`; treat the discrepancy between the two as evidence that
+  even "exact reproduction" is sensitive to `ultralytics` version, exact hyperparameters,
+  and possibly which checkpoint/split is being reported — worth calling out explicitly
+  when we do our own retraining run.
+- **Actual image files are not committed to the GitHub repo** — only `data.yaml`,
+  `ppe_data.yaml`, and the two Roboflow-generated README files are present under `data/`.
+  To retrain or run inference, the images must come from the Kaggle mirror
+  (`snehilsanyal/construction-site-safety-image-dataset-roboflow`) or a fresh Roboflow
+  export of `roboflow-universe-projects/construction-site-safety`, version 28.
+- **Confirmed (not hypothetical) cross-dataset image overlap risk**: the upstream repo's
+  `data/README.dataset.txt` states this dataset's images were themselves *cloned from*
+  several other Roboflow Universe projects, including:
+  `personal-protective-equipment-combined-model` (the exact dataset behind **link #1 in
+  your outline**), plus `people-and-ladders`, `safety-vests`, `excavators-cwlh0`,
+  `mit-indoor-scene-recognition` (used only for null/background images), and
+  `people-detection-general`. **This means the base dataset and the Combined Model
+  dataset almost certainly share source images already** — this elevates the "cross-
+  dataset duplication" item in `PROJECT_PLAN.md`'s risk register from a generic caution
+  to a confirmed, must-handle risk before merging: run perceptual-hash dedup between the
+  base dataset and the Combined Model export specifically, not just as a generic
+  best-practice, and check whether any duplicate lands in one dataset's train split and
+  the other's test split (the worst-case leakage scenario).
 
-## 2. Deployment reference (Step 5 starting point)
+## 2. Deployment reference (Step 5 — secondary inspiration only, confirmed not copied)
 
 - [`Vinayakmane47/PPE_detection_YOLO`](https://github.com/Vinayakmane47/PPE_detection_YOLO) —
   Flask app (`app.py`), same 10-class label set as the base dataset, supports image/video
-  upload and a live webcam route. This is the closest match to "PPE_detection_YOLO" named
-  in the outline and is the recommended starting point to modernize into FastAPI (M5).
-- Other Flask/YOLOv8 PPE apps found during research (not the primary target, but useful
-  prior art for the compliance-messaging UI pattern — e.g. "Worker 3 — missing helmet and
+  upload and a live webcam route. **You confirmed this repo's files were not copied and
+  it should get "less inspiration"** — treat it purely as a loose reference for the
+  general shape of a YOLOv8 + Flask upload/webcam flow, not as a structural base to fork
+  or port code from. M5's FastAPI service should be designed from the endpoint/UX
+  requirements in `PROJECT_PLAN.md` directly rather than by porting this repo.
+- Other Flask/YOLOv8 PPE apps found during research (even more secondary — useful only as
+  prior art for the compliance-messaging pattern, e.g. "Worker 3 — missing helmet and
   vest"): `Sreejith2/PPE_Detection` (React + Flask, per-industry PPE requirement rules,
   `/upload` REST endpoint returning `detected_ppe`/`missing_ppe`/`safety_message`),
   `dinraj910/Construction-Site-Safety-YOLO` (Flask + OpenCV, person↔PPE/machinery

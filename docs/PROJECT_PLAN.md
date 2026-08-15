@@ -61,11 +61,24 @@ attached either. This plan is therefore grounded in:
 2. Independently verified, current facts about the referenced upstream repos and
    datasets (web research, see `DATASET_NOTES.md`), since the PDFs weren't accessible.
 
-**Action needed from you:** push/commit the local file tree (or point me at the fork URL
-you already created) in a follow-up so Step 1's "reproduce baseline exactly" can run
-against your actual checked-out `results/` folder rather than a fresh clone of upstream.
-Until then, Step 1 below describes how to fork+reproduce from scratch using the verified
-upstream repo.
+**Update:** you've confirmed the "existing local files" project is
+`snehilsanyal/Construction-Site-Safety-PPE-Detection` — the same repo already identified
+below by research, so no re-identification was needed. Since it's a small (103MB),
+public repo, I cloned it directly (shallow, inspection-only, not committed to this repo)
+and pulled the real `results/results.csv` and result plots into
+[`docs/BASELINE_METRICS.md`](./BASELINE_METRICS.md) — Step 1's "document exact mAP,
+precision/recall per class, and confusion matrices from the existing `results/` folder"
+is now done with real numbers, not placeholders. You also confirmed
+`Vinayakmane47/PPE_detection_YOLO` gets "less inspiration" and wasn't copied — M5 below
+has been adjusted to treat it as a loose reference only, not a structural base.
+
+**Still open:** this cloud agent VM has no GPU and no `torch`/`ultralytics` installed,
+so the *retraining* half of Step 1 (independently verifying the numbers are
+reproducible, not just documenting the upstream author's numbers) isn't feasible in this
+environment — see `BASELINE_METRICS.md` §4 for the concrete split between what's
+CPU-feasible now (running inference/validation once we have the actual images) versus
+what needs a GPU (full retraining, recommended on Kaggle/Colab as the original author
+did).
 
 ---
 
@@ -89,7 +102,10 @@ Verified upstream: **`snehilsanyal/Construction-Site-Safety-PPE-Detection`**
 
 Deployment reference: **`Vinayakmane47/PPE_detection_YOLO`** (Flask app, same 10-class
 label set, `app.py` + upload/webcam flow) is the best match for "PPE_detection_YOLO" in
-your Step 5 — this is what we'll modernize into FastAPI.
+your Step 5. **You've confirmed this repo's files aren't copied and it should get "less
+inspiration"** — M5 now treats it purely as a loose reference for the general
+upload/webcam flow shape, and designs the FastAPI service from requirements directly
+rather than porting its code.
 
 ---
 
@@ -148,25 +164,36 @@ independently-verifiable sub-deliverables.
 - Risks: over-engineering the scaffold before you know what you need — kept deliberately
   minimal (no custom training framework, just Ultralytics CLI/API + thin wrapper scripts).
 
-### **M1 — Fork & reproduce baseline (your Step 1)**
+### **M1 — Fork & reproduce baseline (your Step 1) — documentation half done**
 
 - Objective: exact reproduction of YOLOv8n on the original 2605/114/82 split, with
   numbers you generated yourself and can defend.
-- Tasks:
-  1. Fork `snehilsanyal/Construction-Site-Safety-PPE-Detection` (or import your existing
-     local copy once pushed).
-  2. Re-run training with the same hyperparameters (100 epochs, imgsz, batch=16) —
-     record exact `ultralytics` version, since YOLOv8 defaults have drifted across
-     releases and that alone can shift mAP by a few points.
-  3. Pull `results/` (confusion matrix, PR curves, per-class P/R) and `runs/detect/train/`
-     outputs into `docs/BASELINE_METRICS.md` verbatim (numbers + plot images), not
-     paraphrased.
-- Deliverables: `docs/BASELINE_METRICS.md` with: global mAP@0.5, mAP@0.5:0.95; per-class
-  P/R/F1 table (all 10 classes); confusion matrix image; PR curve image; environment
-  spec (GPU, `ultralytics` version, seed).
+- Status: **split into two sub-tasks, one done, one blocked on GPU access:**
+  1. ✅ **Done** — documented the upstream repo's own `results/` folder verbatim into
+     [`docs/BASELINE_METRICS.md`](./BASELINE_METRICS.md): global mAP@0.5 (0.810),
+     mAP@0.5:0.95 (0.507), per-class AP@0.5 for all 10 classes (from the PR curve),
+     per-class confusion-matrix diagonal, peak F1 (0.81 @ conf 0.488), per-class
+     instance counts (from the labels histogram), and copies of the actual plots under
+     `docs/assets/baseline/`.
+  2. ⛔ **Blocked here** — independently re-running training to verify these numbers
+     are reproducible. This cloud agent VM has no GPU and no `torch`/`ultralytics`
+     installed. Recommended path: run on Kaggle (matching the original P100 setup) or
+     Colab, using the same `data.yaml`/hyperparameters documented in
+     `BASELINE_METRICS.md`, then bring the resulting `results/` folder back into this
+     repo for comparison against the numbers already documented.
+  3. A cheaper intermediate step that *is* CPU-feasible here: once we have API
+     credentials to pull the actual validation images (Kaggle or Roboflow API key —
+     see Open Questions), run `yolo val model=best.pt data=data.yaml` against them.
+     That's inference on 114 images, not training, and would close the "exact per-class
+     P/R/F1 at a fixed threshold" gap noted in `BASELINE_METRICS.md` §3c without needing
+     a GPU.
 - Risks: Kaggle P100 vs. your actual compute (Colab T4/L4, local GPU, CPU-only) will
   shift wall-clock and possibly final metrics slightly — document actual hardware used,
-  don't claim P100 numbers if you trained elsewhere.
+  don't claim P100 numbers if you trained elsewhere. The independent reproduction found
+  during research (`Venta02/ppe-detection-yolov8`, mAP@0.5 ≈ 0.733) already differs
+  meaningfully from the upstream author's own logged 0.810 — expect our retrain to land
+  somewhere in that range, not an exact match, and report it as such rather than forcing
+  a narrative of exact reproduction.
 
 ### **M2 — Expand & normalize datasets (your Step 2)**
 
@@ -329,7 +356,7 @@ independently-verifiable sub-deliverables.
 |---|---|---|---|
 | Full experiment grid (Step 3) exceeds available time/compute | High | Delays MVP | Cap grid per Section 0; log skipped cells as future work |
 | Synthesized negative labels (`no_goggles`, etc.) are noisy | High | Undermines metric validity | Document heuristic explicitly; manually spot-check a sample; report as a named limitation |
-| Cross-dataset image duplication causes train/test leakage | Medium | Inflated/misleading metrics | Perceptual-hash dedup before splitting (M2) |
+| Cross-dataset image duplication causes train/test leakage | **High (confirmed, not hypothetical)** — the base dataset's own `README.dataset.txt` states its images were cloned from `personal-protective-equipment-combined-model` (link #1 in the outline) among other sources | Inflated/misleading metrics if unresolved | Perceptual-hash dedup between the base dataset and the Combined Model export specifically, before any merged splitting (M2); check for train/test-split conflicts, not just raw duplicates |
 | Annotation-convention differences mistaken for domain shift | Medium | Wrong conclusions in M4 | Explicitly separate "labeling convention" vs. "visual domain" in writeup |
 | `"Safety Goggles"` / `"PPE-Additions-2314"` datasets from your outline don't match the two Universe links you sent | Medium | Step 2 sourced from wrong data | Confirm exact dataset IDs (see Open Questions) before the M2 export step |
 | Roboflow export requires an API key/paid export tier for large datasets (44k images) | Medium | Blocks M2 | Confirm `ROBOFLOW_API_KEY` availability; consider a stratified subset export first |
@@ -338,19 +365,28 @@ independently-verifiable sub-deliverables.
 
 ## 7. Open questions (need your input before M2 can start for real)
 
-1. Please push or share the local file tree you mentioned (or the fork URL) so M1 can
-   reproduce against your actual artifacts instead of a fresh clone.
+1. ~~Push or share the local file tree / fork URL.~~ **Resolved** — confirmed as
+   `snehilsanyal/Construction-Site-Safety-PPE-Detection`; documented in
+   `BASELINE_METRICS.md`.
 2. Your outline names "Safety Goggles" and "PPE‑Additions‑2314" datasets specifically,
    but the two URLs you sent are `personal-protective-equipment-combined-model` (which
    does include a `Goggles` class already) and `hard-hat-universe-0dy7t`. Should I treat
    the combined-model as the "goggles" source and hard-hat-universe as the third
    domain, or do you have distinct links for the exact datasets named in your outline?
+   **Still open** — and now higher-stakes given the confirmed image overlap between the
+   base dataset and the Combined Model (§6 risk register / `DATASET_NOTES.md`).
 3. Do you have (or can you provision) a Roboflow API key for programmatic export? The
    combined model has 44,002 images — full export may need a paid plan or a filtered/
-   stratified export.
-4. What compute do you actually have available (Colab/Kaggle free tier, a local GPU,
-   CPU-only)? This determines how much of the M3 experiment grid is realistic this week
-   vs. needs trimming further.
+   stratified export. Also needed for the cheaper CPU-feasible validation-only run
+   described in M1 above (or a Kaggle API key, as an alternative for just the base
+   dataset's images).
+4. What compute do you actually have available for training (Colab/Kaggle free tier, a
+   local GPU)? **Partially answered by this session**: this cloud agent VM itself has no
+   GPU and no ML libraries installed, so it cannot run the M1 retrain or the M3
+   experiment grid — those need to happen on Kaggle/Colab (or another GPU-backed
+   environment) regardless of what you tell me here. CPU-only work (inference/validation
+   on already-trained checkpoints, data merging/remapping scripts, the FastAPI service)
+   remains fully doable in this environment.
 5. Can you confirm whether the two attached PDFs (`AustinKuo_FrwrdDepEng_v26...`,
    `AustinKuo_DataEngineerCV_vT_26...`) contain additional constraints (e.g., a specific
    target audience like Matroid) that should reshape prioritization — they weren't
@@ -358,7 +394,9 @@ independently-verifiable sub-deliverables.
 
 ## 8. Next steps
 
-Once you confirm the open questions above (particularly #1 and #2), the next PR should
-implement **M0 (scaffold)** for real and **M1 (baseline reproduction)**, since those are
-fully unblocked today regardless of the answers. M2 onward is blocked on dataset access
-details.
+M1's documentation half is done (`BASELINE_METRICS.md`). Remaining unblocked work that
+doesn't need your input: nothing further in M1 until we have API credentials or GPU
+access (see Open Questions #3–4). **M2 is blocked on Open Question #2** — please confirm
+whether the two Universe links already provided are the intended "Safety Goggles" /
+"PPE-Additions" sources before any export/merge work starts, since building the unified
+dataset from the wrong sources would waste the most time-sensitive part of this project.
