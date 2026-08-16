@@ -1,6 +1,11 @@
 # Unified Multi-Domain PPE Compliance Detection — Project Plan
 
-Status: **Planning artifact** (no training/serving code written yet).
+Status: started as a **planning artifact**; as of 2026-08-16 this repo also has
+real, unit-tested code for dataset merging (`src/data/`, M2) and evaluation
+math (`src/evaluation/`, M3) — see the milestone table in `README.md` for an
+up-to-date status snapshot. No training has run yet (this dev environment has
+no GPU) — see `notebooks/train_on_kaggle_or_colab.ipynb` for how to unblock
+that on Kaggle/Colab.
 Owner: Austin Kuo. Prepared by: Cursor Cloud Agent, 2026-08-15.
 
 This document is the engineering plan for refactoring `Worker-Safety-PPE-Detection-Model`
@@ -253,10 +258,20 @@ independently-verifiable sub-deliverables.
   make corresponding source available kicks in. Worth a one-line disclosure in the
   final README if/when there's a public demo URL; a non-issue for local/portfolio use.
 
-### **M3 — Model experiments & mathematical baseline (your Step 3)**
+### **M3 — Model experiments & mathematical baseline (your Step 3) — eval code built & tested, no model to run it on yet**
 
 - Objective: establish YOLOv8n baseline on the *unified* dataset, then run a scoped
   ablation grid with full metric + calibration reporting.
+- Status: ✅ **The math/eval code is implemented and unit-tested** in `src/evaluation/`
+  (`boxes.py` IoU+matching, `metrics.py` per-class P/R/F1 + confusion matrix,
+  `calibration.py` ECE + Brier score, `threshold_optimization.py` best-F1 vs.
+  minimum-recall-constrained thresholds, `yolo_adapter.py` to plug real Ultralytics
+  predictions into all of the above) — 26 additional unit tests beyond M2's 12, all
+  passing, using synthetic data since no trained model exists yet. ⛔ **Not yet run
+  against real data** - that requires a trained model, which requires GPU compute this
+  environment doesn't have. `notebooks/train_on_kaggle_or_colab.ipynb` Section 6 runs
+  this exact code against real predictions the moment you have a `best.pt` - no further
+  code needed, just execution.
 - Experiment grid (recommend cutting to what's realistic for the MVP week — see Section 0):
   - Backbones: YOLOv8n (baseline) → YOLOv8s (1 additional run for the MVP; YOLOv8m as
     stretch).
