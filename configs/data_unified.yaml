@@ -1,12 +1,17 @@
-# Draft unified dataset config (YOLO format).
+# Draft unified dataset config (YOLO format). Mirrors src/data/label_schema.py -
+# keep both in sync.
 #
-# STATUS: placeholder — paths are not yet populated because dataset export/merge
-# (Milestone M2 in docs/PROJECT_PLAN.md) has not run yet. Do not point a training
-# job at this file until scripts/build_unified_dataset.py exists and has been run.
+# STATUS: `scripts/build_unified_dataset.py` exists, is unit-tested, and has been
+# smoke-tested end-to-end against one real source (docs/DATA_DISTRIBUTION.md).
+# `path`/train/val/test below are still placeholders because the two Roboflow
+# sources (personal-protective-equipment-combined-model, hard-hat-universe-0dy7t)
+# are blocked on a Roboflow API key - see docs/PROJECT_PLAN.md Open Question #3.
+# Run `python scripts/build_unified_dataset.py --source ... --out data/unified`
+# once unblocked; that command also generates a real data.yaml at
+# data/unified/data.yaml, which should be used for training instead of this file.
 #
-# `boots`/`no_boots` are included per the target taxonomy in docs/PROJECT_PLAN.md,
-# but no confirmed source dataset for boots was found during research
-# (see docs/DATASET_NOTES.md) — may need to be dropped or sourced separately.
+# `boots`/`no_boots` ARE confirmed available now: the Ultralytics Construction-PPE
+# source (added this session, see docs/DATASET_NOTES.md #5) has both.
 
 path: ../data/unified  # populated by scripts/build_unified_dataset.py (M2)
 train: images/train

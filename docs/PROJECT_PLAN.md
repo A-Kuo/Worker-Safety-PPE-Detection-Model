@@ -195,38 +195,63 @@ independently-verifiable sub-deliverables.
   somewhere in that range, not an exact match, and report it as such rather than forcing
   a narrative of exact reproduction.
 
-### **M2 — Expand & normalize datasets (your Step 2)**
+### **M2 — Expand & normalize datasets (your Step 2) — pipeline built & smoke-tested**
 
 - Objective: merge the base dataset with the two Roboflow Universe sources you linked
   into one YOLO-format dataset under the unified schema from Section 3.
-- Tasks:
-  1. Export `personal-protective-equipment-combined-model` (44,002 images — this is
-     large; consider exporting a stratified subset first to keep iteration fast) and
-     `hard-hat-universe-0dy7t` (~7,000 images) from Roboflow in YOLOv8 format.
-  2. **Cross-dataset deduplication** (perceptual hash / MD5 on images) before merging —
-     Universe forks commonly share source photos; skipping this risks train/test leakage
-     across the merged splits.
-  3. Remap every source label file to the unified taxonomy per the DATASET_NOTES mapping
-     table; synthesize negative classes (`no_*`) via IoU-based person↔PPE association
-     (a person box with no matched `helmet` box above IoU/containment threshold → emit
-     `no_helmet` box at the person's head region — this needs a clear, documented
-     heuristic, since it's inventing labels the annotators didn't provide).
-  4. Re-split (stratified by dataset source *and* class, not just randomly) into unified
-     train/val/test.
-  5. Data distribution analysis notebook/script: counts per class × per source dataset ×
-     resulting merged split; explicit imbalance report (e.g., `no_goggles` will be rare
-     because goggles are rare across all three sources); domain-shift note (construction
-     site vs. combined-model's mixed environments vs. hard-hat-universe's workplace
-     scenes).
-- Deliverables: `data/unified/` (or documented external path) + `configs/data_unified.yaml`;
-  `docs/DATA_DISTRIBUTION.md` with counts tables and imbalance/domain-shift callouts;
-  a `scripts/build_unified_dataset.py` that is re-runnable end-to-end from raw Roboflow
-  exports (so the pipeline is reproducible, not manual).
-- Risks (high — this is the hardest step, matching your own assessment): synthesized
-  negatives are heuristic and will contain noise; annotation-style mismatch (bbox
-  tightness, occlusion handling) between datasets can look like "domain shift" when it's
-  actually "labeling-convention shift" — call this out explicitly in the writeup rather
-  than conflating the two.
+- **Confirmed (2026-08-16): you approved using the two Universe links as-is** for Step 2
+  and delegated resolving any label/source discrepancies. Resolves Open Question #2.
+- Status:
+  1. ✅ **Done** — real, tested merge pipeline: `src/data/label_schema.py` (unified
+     taxonomy + per-source class maps, raises loudly on any unrecognized class instead
+     of silently dropping it), `src/data/dedup.py` (perceptual-hash near-duplicate
+     detection), `scripts/build_unified_dataset.py` (orchestrates remap + copy + dedup +
+     unified `data.yaml` + distribution CSV). 12 unit tests in `tests/`, all passing.
+  2. ✅ **Done** — added a **fourth source**, `ultralytics_construction_ppe` (Ultralytics'
+     own official "Construction-PPE" demo dataset, 1,416 images), because unlike the two
+     Roboflow-hosted datasets it's downloadable with no API key and already uses almost
+     exactly your target taxonomy (`helmet`/`vest`/`goggles`/`boots`/`gloves` +
+     `no_*` negatives). This is an *addition*, not a substitution — the two Roboflow
+     links remain the primary named sources; this one fills the `boots`/`goggles`/
+     `gloves` gap neither of them confirms yet, and let the pipeline be smoke-tested
+     against real images today instead of staying purely theoretical. One genuine
+     ambiguity resolved along the way: this dataset's class literally named `"none"` was
+     empirically confirmed (by rendering its own boxes on its own images — see
+     `DATASET_NOTES.md`) to be its no-vest negative, not a class to drop.
+  3. ✅ **Done (partial)** — ran the pipeline for real against this source and produced
+     `docs/DATA_DISTRIBUTION.md`, including a real, unplanned finding: the dedup step
+     caught **57 duplicate clusters (out of 122) spanning more than one of
+     train/val/test** within this single dataset — i.e. even a well-known official
+     dataset likely has some train/test leakage from consecutive video frames. This is
+     exactly the kind of risk the dedup step exists to catch, now demonstrated on real
+     data rather than asserted as a hypothetical risk.
+  4. ⛔ **Still blocked** — `personal-protective-equipment-combined-model` (44,002
+     images) and `hard-hat-universe-0dy7t` (~7,000 images) cannot be exported without a
+     Roboflow API key (confirmed: the `roboflow` Python package raises
+     `ValueError: A valid API key must be provided` even for these public datasets — see
+     Open Questions). Both are already wired into `label_schema.py` with
+     `status="pending_export"` and best-available class mappings from public research
+     (locked-in exact class lists this session: Hard Hat Universe v26 = 6 classes,
+     7,034 images, 4912/1414/708 split; Combined Model v4 = 44,002 images, 70/20/10
+     split) — re-verify against the real export and flip to `status="confirmed"` once
+     the key is available, then re-run `scripts/build_unified_dataset.py` with no other
+     code changes needed.
+  5. ⛔ **Not started** — IoU-based negative-class synthesis for sources that have no
+     explicit negative for a class (needed for whichever classes the Combined Model
+     export turns out to lack); cross-source dedup specifically between
+     `construction_site_safety` and `ppe_combined_model` (the confirmed-not-hypothetical
+     overlap from `DATASET_NOTES.md`); stratified re-split by source+class.
+- Risks (high — this is the hardest step, matching your own assessment, and the dedup
+  finding above is direct evidence of it): synthesized negatives are heuristic and will
+  contain noise; annotation-style mismatch (bbox tightness, occlusion handling) between
+  datasets can look like "domain shift" when it's actually "labeling-convention shift."
+- **New risk found this session**: the `ultralytics` Python package (needed for all
+  training) and the Ultralytics Construction-PPE dataset asset are both **AGPL-3.0
+  licensed**. For a personal/portfolio, non-commercial project this is not a blocker,
+  but AGPL's §13 "remote network interaction" clause means if Step 5's inference API is
+  ever exposed as a live public service (not just run locally/demoed), the obligation to
+  make corresponding source available kicks in. Worth a one-line disclosure in the
+  final README if/when there's a public demo URL; a non-issue for local/portfolio use.
 
 ### **M3 — Model experiments & mathematical baseline (your Step 3)**
 
@@ -332,22 +357,25 @@ independently-verifiable sub-deliverables.
 ├── docs/
 │   ├── PROJECT_PLAN.md             # this file
 │   ├── DATASET_NOTES.md            # grounded dataset facts + label mapping
-│   ├── BASELINE_METRICS.md         # M1 output
-│   ├── DATA_DISTRIBUTION.md        # M2 output
+│   ├── BASELINE_METRICS.md         # M1 output (done)
+│   ├── DATA_DISTRIBUTION.md        # M2 output (in progress - 1 of 4 sources merged so far)
 │   ├── EXPERIMENTS.md              # M3 output
 │   ├── CROSS_DOMAIN_EVAL.md        # M4 output
 │   ├── DEPLOYMENT_BENCHMARKS.md    # M5 output
-│   └── VLM_LAYER.md                # M6 output
+│   ├── VLM_LAYER.md                # M6 output
+│   └── assets/                     # committed reference plots/CSVs/configs (small, curated)
+│       ├── baseline/                # M1: copied results/ artifacts from the upstream repo
+│       └── m2_smoke_test/           # M2: real pipeline output from the one unblocked source
 ├── scripts/
-│   └── build_unified_dataset.py    # M2: reproducible merge pipeline
+│   └── build_unified_dataset.py    # M2: reproducible merge pipeline (implemented + smoke-tested)
 ├── src/
-│   ├── data/                       # dataset export/merge/remap utilities
-│   ├── training/                   # training entrypoints + experiment configs
-│   ├── evaluation/                 # metrics, calibration, threshold tuning
-│   ├── serving/                    # FastAPI app + inference wrappers
-│   └── vlm/                        # M6 CLIP/OpenCLIP layer
+│   ├── data/                       # M2: label_schema.py + dedup.py (implemented + unit-tested)
+│   ├── training/                   # training entrypoints + experiment configs (not started)
+│   ├── evaluation/                 # metrics, calibration, threshold tuning (not started)
+│   ├── serving/                    # FastAPI app + inference wrappers (not started)
+│   └── vlm/                        # M6 CLIP/OpenCLIP layer (not started)
 ├── notebooks/                      # exploratory EDA, kept out of the critical path
-└── tests/                          # unit tests for label remapping, metric functions
+└── tests/                          # test_label_schema.py, test_dedup.py (12 tests, passing)
 ```
 
 ## 6. Risk register
@@ -358,28 +386,33 @@ independently-verifiable sub-deliverables.
 | Synthesized negative labels (`no_goggles`, etc.) are noisy | High | Undermines metric validity | Document heuristic explicitly; manually spot-check a sample; report as a named limitation |
 | Cross-dataset image duplication causes train/test leakage | **High (confirmed, not hypothetical)** — the base dataset's own `README.dataset.txt` states its images were cloned from `personal-protective-equipment-combined-model` (link #1 in the outline) among other sources | Inflated/misleading metrics if unresolved | Perceptual-hash dedup between the base dataset and the Combined Model export specifically, before any merged splitting (M2); check for train/test-split conflicts, not just raw duplicates |
 | Annotation-convention differences mistaken for domain shift | Medium | Wrong conclusions in M4 | Explicitly separate "labeling convention" vs. "visual domain" in writeup |
-| `"Safety Goggles"` / `"PPE-Additions-2314"` datasets from your outline don't match the two Universe links you sent | Medium | Step 2 sourced from wrong data | Confirm exact dataset IDs (see Open Questions) before the M2 export step |
-| Roboflow export requires an API key/paid export tier for large datasets (44k images) | Medium | Blocks M2 | Confirm `ROBOFLOW_API_KEY` availability; consider a stratified subset export first |
+| ~~`"Safety Goggles"` / `"PPE-Additions-2314"` naming mismatch~~ | **Resolved** — you confirmed using the two Universe links as-is | — | — |
+| Roboflow export requires an API key even for public datasets | **Confirmed** (the `roboflow` package raises `ValueError: A valid API key must be provided` with no key at all, not just for paid tiers) | Blocks M2's remaining two sources | Need `ROBOFLOW_API_KEY` in Cursor Dashboard secrets; pipeline code is ready, just needs credentials to run against real exports |
 | LoRA-for-CNN-detector claim is technically unusual and could read as buzzword-chasing in a portfolio review | Low–Medium | Credibility | Either implement head-freezing/fine-tuning honestly labeled as "adapter-style," or skip and say so |
 | VLM layer scope creep turns a detection project into an unfinished multimodal project | Medium | Dilutes core deliverable | Keep M6 as a strictly separate, clearly-labeled stretch PR after M1–M5 are solid |
+| `ultralytics` package (and the Ultralytics Construction-PPE dataset asset added this session) are **AGPL-3.0** licensed | Low for a personal/portfolio project | AGPL's network-use clause (§13) would require publishing corresponding source if M5's API is ever exposed as a live public service, not just demoed locally | Non-issue for local/portfolio use; add a one-line license disclosure to the README if a public demo URL is ever stood up |
+| Official third-party datasets can themselves have train/test leakage | **Confirmed, not hypothetical** — dedup found 57/122 duplicate clusters spanning >1 split within the Ultralytics Construction-PPE dataset alone (likely consecutive video frames), see `DATA_DISTRIBUTION.md` §3 | Optimistic metrics if trained/evaluated on the original splits | Re-split by duplicate cluster (never split a cluster across train/val/test) before trusting any metrics from this or any other merged source |
 
 ## 7. Open questions (need your input before M2 can start for real)
 
 1. ~~Push or share the local file tree / fork URL.~~ **Resolved** — confirmed as
    `snehilsanyal/Construction-Site-Safety-PPE-Detection`; documented in
    `BASELINE_METRICS.md`.
-2. Your outline names "Safety Goggles" and "PPE‑Additions‑2314" datasets specifically,
-   but the two URLs you sent are `personal-protective-equipment-combined-model` (which
-   does include a `Goggles` class already) and `hard-hat-universe-0dy7t`. Should I treat
-   the combined-model as the "goggles" source and hard-hat-universe as the third
-   domain, or do you have distinct links for the exact datasets named in your outline?
-   **Still open** — and now higher-stakes given the confirmed image overlap between the
-   base dataset and the Combined Model (§6 risk register / `DATASET_NOTES.md`).
-3. Do you have (or can you provision) a Roboflow API key for programmatic export? The
-   combined model has 44,002 images — full export may need a paid plan or a filtered/
-   stratified export. Also needed for the cheaper CPU-feasible validation-only run
-   described in M1 above (or a Kaggle API key, as an alternative for just the base
-   dataset's images).
+2. ~~"Safety Goggles" / "PPE-Additions-2314" naming mismatch.~~ **Resolved (2026-08-16)**
+   — you confirmed using `personal-protective-equipment-combined-model` and
+   `hard-hat-universe-0dy7t` as the two additional sources, and delegated resolving any
+   further label/source ambiguity. Locked in this session: exact confirmed class lists
+   and sizes for both (see `DATASET_NOTES.md`), plus a fourth source
+   (`ultralytics_construction_ppe`) added to make real progress while these two remain
+   blocked on API access (item #3).
+3. **Still open, now the main blocker.** Do you have (or can you provision) a Roboflow
+   API key for programmatic export? Confirmed this session: the `roboflow` Python
+   package outright refuses to talk to the API without one — even for these fully public
+   datasets — so this isn't optional the way it might be for a paid-tier limit. Add it as
+   `ROBOFLOW_API_KEY` via Cursor Dashboard → Cloud Agents → Secrets. A Kaggle API key
+   (`KAGGLE_USERNAME`/`KAGGLE_KEY`) would separately unblock the base dataset's actual
+   images (also not committed to its GitHub repo — see `BASELINE_METRICS.md` §4) for the
+   CPU-feasible validation-only run described there.
 4. What compute do you actually have available for training (Colab/Kaggle free tier, a
    local GPU)? **Partially answered by this session**: this cloud agent VM itself has no
    GPU and no ML libraries installed, so it cannot run the M1 retrain or the M3
@@ -394,9 +427,24 @@ independently-verifiable sub-deliverables.
 
 ## 8. Next steps
 
-M1's documentation half is done (`BASELINE_METRICS.md`). Remaining unblocked work that
-doesn't need your input: nothing further in M1 until we have API credentials or GPU
-access (see Open Questions #3–4). **M2 is blocked on Open Question #2** — please confirm
-whether the two Universe links already provided are the intended "Safety Goggles" /
-"PPE-Additions" sources before any export/merge work starts, since building the unified
-dataset from the wrong sources would waste the most time-sensitive part of this project.
+M1's documentation half is done (`BASELINE_METRICS.md`). M2's merge pipeline is built,
+unit-tested, and smoke-tested end-to-end against one real source (`DATA_DISTRIBUTION.md`).
+**Everything else is now blocked on the same single thing: a Roboflow API key**
+(Open Question #3). Once that's added as a secret, the very next action is:
+
+```
+python scripts/build_unified_dataset.py \
+  --source construction_site_safety=<path-to-exported-base-dataset> \
+  --source ppe_combined_model=<path-to-exported-combined-model> \
+  --source hard_hat_universe=<path-to-exported-hard-hat-universe> \
+  --source ultralytics_construction_ppe=<path-to-construction-ppe> \
+  --out data/unified
+```
+
+— no further code changes needed for the merge itself. What *would* still need doing
+after that: (a) flip `status="pending_export"` to `"confirmed"` in
+`src/data/label_schema.py` for the two Roboflow sources once their real `data.yaml`
+class lists are verified against what's currently there (assembled from public research,
+not a real export), (b) IoU-based negative synthesis for any classes the Combined Model
+export turns out to lack explicit negatives for, and (c) re-generate
+`DATA_DISTRIBUTION.md` with the full multi-source table.

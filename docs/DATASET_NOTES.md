@@ -79,51 +79,95 @@ something we fork or copy structure from directly.
 
 ## 3. Personal Protective Equipment — Combined Model (link #1 in the outline)
 
+**Confirmed as an M2 source (2026-08-16).** Blocked on a Roboflow API key — the
+`roboflow` Python package refuses all access without one (`ValueError: A valid API key
+must be provided`), confirmed by actually attempting the call this session; this is not
+a paid-tier limitation, it's a hard requirement for every export, even fully public ones.
+
 - URL: `https://universe.roboflow.com/roboflow-universe-projects/personal-protective-equipment-combined-model`
-- Size: **44,002 images** (version `/8` at time of research) — this is an order of
-  magnitude larger than the base dataset; plan for a stratified subset for fast
-  iteration before committing to a full export.
+- Size: **44,002 images**. Version `/4` ("resize640_allClasses_noAugs", generated
+  Dec 3, 2022) confirmed split: **70% train (30,765) / 20% valid (8,814) / 10% test
+  (4,423)**. (Version `/8` also exists per earlier research; re-check which version to
+  export from once we have API access — `/4`'s "allClasses" framing in its own name
+  suggests it may be the more complete class list.)
 - Classes observed in the public API/UI snippet (list is not exhaustively confirmed —
   the page truncates with "+ custom", meaning more classes likely exist than shown):
-  `Mask, Goggles, Person, Hardhat, Ladder, Safety Vest, Gloves` (at minimum).
-  **Action:** pull the actual `data.yaml` from an export to get the authoritative full
-  class list and per-class counts before finalizing the mapping table below.
+  `Mask, Goggles, Person, Hardhat, Ladder, Safety Vest, Gloves` (at minimum). A
+  third-party repo's README (`NamHoKi/PPE-Detection-for-Construction-Site-Safety`) links
+  to a browse query for `class:"NO-Safety Vest"` against this exact project, confirming
+  it **also has at least one explicit negative class** (`NO-Safety Vest`) — so it isn't
+  purely positive-only the way earlier research suggested.
+  **Action:** pull the actual `data.yaml` from a real export to get the authoritative
+  full class list and per-class counts before finalizing the mapping table below;
+  `src/data/label_schema.py`'s `SOURCES["ppe_combined_model"]` is marked
+  `status="pending_export"` for exactly this reason.
 - This dataset is the best candidate to satisfy the "Safety Goggles" and "gloves"
   requirements in the outline's unified schema, since it already contains `Goggles` and
   `Gloves` classes that the base dataset lacks.
 
 ## 4. Hard Hat Universe (link #2 in the outline)
 
+**Confirmed as an M2 source (2026-08-16).** Same API-key blocker as above.
+
 - URL: `https://universe.roboflow.com/universe-datasets/hard-hat-universe-0dy7t`
-- Size: **~7,000 images**.
-- Classes (6, per the page's "Classes (6)" listing — only 5 were resolvable from the
-  cached snippet): `head, helmet, person, hi-viz helmet, hi-viz vest`, plus one
-  additional class not captured in the snippet (re-check the export `data.yaml`).
+- Size: confirmed exact for version **26** ("no_nulls_plain", generated Jun 28, 2022):
+  **7,034 total images**, split **70% train (4,912) / 20% valid (1,414) / 10% test
+  (708)**.
+- Classes (6, now fully confirmed via the Roboflow Universe UI text): `head, helmet,
+  person, hi-viz, hi-viz helmet, hi-viz vest`. (Earlier research only surfaced 5 of the
+  6; the missing one was the generic `hi-viz` class, without a body-part qualifier.)
 - Framing (from the dataset's own description): annotations explicitly include bare
   `head` and `person`-without-helmet cases "for when an individual may be present without
   a hard hat" — i.e., **`head` is effectively the implicit negative for `helmet`** in
   this dataset, which is exactly the kind of "implicit vs. explicit negative" mismatch
-  called out in the Project Plan's risk register.
+  called out in the Project Plan's risk register. Current mapping decision (in
+  `src/data/label_schema.py`): `head` → `no_helmet` (treated as this dataset's explicit
+  negative, not synthesized), generic `hi-viz` → `vest` (closest unified class for an
+  ambiguous "wearing hi-vis clothing generally" tag — flagged for re-review with real
+  images, the same way the Construction-PPE `none` ambiguity below was resolved).
 - A related paper (Vision-Based Construction Safety Monitoring, MDPI 2024) used a
   *different* derived dataset with 5 classes (`person, hard hat, boots, vest, robodog`)
   and cites `hard-hat-universe-0dy7t` only as an external classification test set (214
   images, hand-labeled safe/unsafe) — useful prior art for the M4 cross-domain
   evaluation methodology, not a dataset to import directly.
 
-## 5. Datasets named in the outline but not directly linked
+## 5. Ultralytics Construction-PPE — added this session as an interim/supplementary source
 
-The outline's Step 2 explicitly names **"Safety Goggles"** and **"PPE‑Additions‑2314"**
-as datasets to import, but the two URLs actually provided are the Combined Model and
-Hard Hat Universe above. These may be:
+**Not one of your two linked datasets** — added because it's downloadable with no API
+key (`https://github.com/ultralytics/assets/releases/download/v0.0.0/construction-ppe.zip`,
+178.4 MB) and already uses almost exactly your target unified taxonomy, letting the merge
+pipeline be built and tested against real data today instead of staying purely
+theoretical until Roboflow access is sorted out. This is a genuine addition, not a
+silent substitution for either of your two links — both remain the primary named M2
+sources and are still queued up in `src/data/label_schema.py`, just blocked.
 
-- The same datasets under different working names (e.g., "Safety Goggles" ≈ the
-  `Goggles` class already inside the Combined Model), or
-- Distinct Roboflow Universe projects that need their own links — `"2314"` looks like it
-  could be a project/version identifier rather than a descriptive name, which isn't
-  resolvable via search alone.
+- Source: official Ultralytics dataset asset, documented at
+  `docs.ultralytics.com/datasets/detect/construction-ppe` and configured via
+  `ultralytics/cfg/datasets/construction-ppe.yaml` in the `ultralytics/ultralytics` repo.
+  **License: AGPL-3.0** (see risk register in `PROJECT_PLAN.md` — a non-issue for
+  local/portfolio use, relevant only if a live public API is ever stood up).
+- Size: **1,416 images** (1,132 train / 143 val / 141 test).
+- 11 classes: `helmet, gloves, vest, boots, goggles, none, Person, no_helmet, no_goggle,
+  no_gloves, no_boots`.
+- **Resolved ambiguity**: the class literally named `"none"` is not a generic/background
+  tag to drop. Rendering this dataset's own bounding boxes onto its own images (e.g.
+  `image1117.jpg`: a `no_helmet` box over the head region and a `none` box over the torso
+  region, in the same photo) shows `none` is consistently placed over the torso of a
+  person not wearing a hi-vis vest — i.e. it's this dataset's (oddly-named) `no_vest`
+  negative. Mapped accordingly in `src/data/label_schema.py`; see
+  `tests/test_label_schema.py::test_construction_ppe_none_class_maps_to_no_vest`.
+- Real class-instance distribution and a real dedup run against this dataset are in
+  `docs/DATA_DISTRIBUTION.md` — including a genuine, unplanned finding that ~47% of this
+  dataset's own detected duplicate clusters span more than one of train/val/test
+  (likely consecutive video frames), suggesting some pre-existing leakage independent of
+  anything we're merging in.
 
-**This is flagged as Open Question #2 in `PROJECT_PLAN.md` — confirm before building the
-unified dataset**, so M2 doesn't merge the wrong sources.
+## 6. Datasets named in the outline but not directly linked — resolved
+
+The outline's Step 2 named **"Safety Goggles"** and **"PPE‑Additions‑2314"** as datasets
+to import. **Resolved (2026-08-16, your confirmation):** use the two Universe links
+provided (Combined Model + Hard Hat Universe) as the actual M2 sources; no separate
+datasets by those exact names needed to be tracked down.
 
 ## Unified label mapping
 

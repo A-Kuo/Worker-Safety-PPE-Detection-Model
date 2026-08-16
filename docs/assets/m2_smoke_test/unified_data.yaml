@@ -1,0 +1,22 @@
+path: /tmp/unified_smoke_test
+train: train/images
+val: val/images
+test: test/images
+names:
+  0: helmet
+  1: no_helmet
+  2: vest
+  3: no_vest
+  4: goggles
+  5: no_goggles
+  6: gloves
+  7: no_gloves
+  8: boots
+  9: no_boots
+  10: mask
+  11: no_mask
+  12: person
+  13: machinery
+  14: vehicle
+  15: cone
+  16: ladder

@@ -1,0 +1,660 @@
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image100.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image127.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image148.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image831.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1000.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image147.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1001.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image999.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1002.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1004.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1011.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1017.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1018.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image851.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image854.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image855.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image872.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image909.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image911.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image957.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image958.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image959.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image960.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image969.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image972.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image973.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image974.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1010.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1003.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1007.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1014.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image910.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1012.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1013.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image864.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1015.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1020.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1053.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1054.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1056.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1058.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1059.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1061.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1062.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1097.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1101.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image850.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image856.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image857.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image861.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image862.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image863.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image869.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image871.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1055.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1057.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1096.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image355.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image508.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image867.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image868.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1019.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image860.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1016.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image135.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image5.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image757.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image6.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image102.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1025.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1038.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1079.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image123.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image142.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image15.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image153.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image156.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image20.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image204.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image24.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image301.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image33.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image36.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image397.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image42.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image429.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image438.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image451.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image49.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image52.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image54.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image56.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image59.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image61.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image66.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image7.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image71.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image73.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image76.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image77.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image78.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image79.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image90.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image12.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image31.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image9.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1009.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image160.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image40.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image63.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1021.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1022.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1026.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1027.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1028.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1029.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1031.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image888.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image889.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image890.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image891.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image892.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image893.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image894.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image901.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image902.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1023.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1024.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image352.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image103.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image215.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1030.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1032.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1033.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image403.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1039.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1040.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1043.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image93.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image94.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1049.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image441.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image104.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image105.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image106.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image97.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image446.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image444.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image98.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1041.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1042.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image281.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1044.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1045.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1047.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1048.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1050.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1052.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image870.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image895.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image899.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image92.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image95.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image96.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image896.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1063.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1064.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1066.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1067.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1071.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1094.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1095.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1098.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1099.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1102.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1103.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1104.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1105.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1106.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1107.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1065.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1068.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1070.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1073.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image512.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1072.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1075.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1108.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1074.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1076.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1077.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1080.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1081.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1082.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1084.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1083.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1086.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1087.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1085.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image109.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image16.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image26.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image683.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image692.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image853.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image951.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image150.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1090.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image226.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image51.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image642.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image711.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image743.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image898.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image950.jpeg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1046.jpeg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image619.jpeg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1092.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image1091.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1093.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image491.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image577.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1100.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image34.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1110.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image25.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image28.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image3.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image720.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image919.jpeg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image141.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1112.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1113.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1111.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1114.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1115.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1116.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image85.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1124.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image638.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image778.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1180.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1262.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image120.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image172.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image193.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image247.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image268.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image279.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image290.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image408.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image45.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image47.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image503.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image121.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image439.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1220.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image616.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image124.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image887.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image140.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1274.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1400.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image128.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image722.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1286.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image605.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image606.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image610.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image13.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image682.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image688.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image786.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image1323.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image676.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image681.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image716.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image705.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image719.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image134.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image136.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image139.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image143.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image146.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image4.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image620.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image687.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image704.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image962.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image151.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image654.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image808.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image110.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image450.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image152.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image155.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image158.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image970.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image192.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image292.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image297.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image217.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image471.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image673.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image725.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image730.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image733.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image745.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image709.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image239.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image879.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image244.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image370.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image245.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image303.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image252.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image255.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image254.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image968.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image975.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image256.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image350.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image260.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image396.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image262.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image88.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image91.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image272.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image414.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image276.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image278.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image283.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image435.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image284.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image456.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image286.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image83.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image289.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image356.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image294.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image415.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image300.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image99.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image302.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image445.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image316.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image452.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image317.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image558.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image322.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image615.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image332.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image365.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image492.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image68.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image80.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image81.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image82.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image339.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image483.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image351.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image388.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image592.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image585.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image367.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image494.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image376.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image564.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image379.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image993.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image382.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image578.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image39.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image818.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image405.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image432.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image442.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image296.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image473.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image565.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image504.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image407.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image509.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image510.jpg
+[max_dist=1]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image575.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image586.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image590.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image925.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image926.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image928.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image923.jpg
+[max_dist=1]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image598.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image599.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image60.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image689.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image691.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image715.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image807.jpeg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image137.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image686.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image62.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image632.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image69.jpeg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image653.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image920.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image767.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image70.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image675.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image713.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image731.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image736.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image737.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image684.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image685.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image690.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image693.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image699.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image702.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image712.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image724.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image738.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image741.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image670.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image674.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image708.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image72.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image729.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image718.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image728.jpeg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image858.jpeg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image65.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image732.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image744.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image669.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image768.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image773.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image787.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image769.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image776.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image788.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image770.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image772.jpg
+[max_dist=1]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image780.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image779.jpg
+[max_dist=2]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image790.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image791.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image792.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image793.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image795.jpeg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image739.jpeg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image815.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image816.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image817.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image820.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image821.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image823.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image822.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image828.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image829.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image835.jpg
+[max_dist=1]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image833.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image834.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image836.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image837.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image838.jpg
+[max_dist=1]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image839.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image842.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image844.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image845.jpg
+[max_dist=1]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image877.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image876.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image878.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image880.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image881.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image882.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image883.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image884.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image900.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image912.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image977.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image978.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image913.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image921.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image922.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image965.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image979.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image903.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image904.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image905.jpg
+[max_dist=4]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image916.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image917.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image918.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image929.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image932.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image936.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image937.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image933.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image927.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image934.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image935.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image938.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image941.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image942.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image944.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image945.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image391.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image943.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image946.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image947.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image948.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image949.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image952.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image953.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image954.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image956.jpg
+[max_dist=1]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image966.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image967.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image980.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image983.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image984.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image985.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image986.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image389.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image987.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image990.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image991.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image992.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image994.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image995.jpg
+[max_dist=5]
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image996.jpg
+  /tmp/unified_smoke_test/train/images/ultralytics_construction_ppe__image998.jpg
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image997.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/val/images/ultralytics_construction_ppe__image164.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image168.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image180.jpg
+[max_dist=3]
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1088.jpg
+  /tmp/unified_smoke_test/test/images/ultralytics_construction_ppe__image1089.jpg
