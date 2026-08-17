@@ -1,0 +1,22 @@
+# Hard Hat Universe — held-out domain eval only (do not mix into training).
+# Remap helmet / hi-viz helmet / hi-viz vest / person / head onto UNIFIED_CLASS_NAMES.
+path: data/raw/hardhat
+train: train/images
+val: valid/images
+test: test/images
+nc: 14
+names:
+  - helmet
+  - no_helmet
+  - vest
+  - no_vest
+  - goggles
+  - no_goggles
+  - gloves
+  - no_gloves
+  - mask
+  - no_mask
+  - person
+  - cone
+  - ladder
+  - fall_detected

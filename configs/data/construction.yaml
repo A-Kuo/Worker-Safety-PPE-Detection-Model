@@ -1,0 +1,18 @@
+# Construction Site Safety v28 — original 10-class names for inherited baseline eval.
+# Download scripts should populate data/raw/construction/ from Roboflow.
+path: data/raw/construction
+train: train/images
+val: valid/images
+test: test/images
+nc: 10
+names:
+  - Hardhat
+  - Mask
+  - NO-Hardhat
+  - NO-Mask
+  - NO-Safety Vest
+  - Person
+  - Safety Cone
+  - Safety Vest
+  - machinery
+  - vehicle

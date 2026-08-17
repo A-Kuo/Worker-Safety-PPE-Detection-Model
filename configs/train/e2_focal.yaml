@@ -1,0 +1,15 @@
+# E2 — YOLOv8n + Ultralytics focal loss. Same subset/seed as E0; targets no_* FNs.
+experiment: e2_focal
+model: yolov8n.pt
+data: configs/data/combined.yaml
+subset_size: 12000
+epochs: 100
+imgsz: 640
+batch: 16
+seed: 42
+cos_lr: true
+patience: 20
+pretrained: true
+optimizer: auto
+fl_gamma: 1.5
+close_mosaic: 10

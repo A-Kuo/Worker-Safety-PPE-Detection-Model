@@ -1,0 +1,22 @@
+# Personal Protective Equipment Combined Model v4 — unified 14-class schema.
+# Download + remap scripts should populate data/raw/combined/ with rewritten labels.
+path: data/raw/combined
+train: train/images
+val: valid/images
+test: test/images
+nc: 14
+names:
+  - helmet
+  - no_helmet
+  - vest
+  - no_vest
+  - goggles
+  - no_goggles
+  - gloves
+  - no_gloves
+  - mask
+  - no_mask
+  - person
+  - cone
+  - ladder
+  - fall_detected

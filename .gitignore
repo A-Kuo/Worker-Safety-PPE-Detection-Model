@@ -1,0 +1,36 @@
+# Raw / downloaded datasets — do not commit 44k images
+data/raw/
+data/combined/
+data/hardhat/
+data/construction/
+
+# Ultralytics / experiment runs
+runs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Experiment weights except the documented inherited baseline
+*.pt
+!baselines/snehilsanyal_yolov8n_css/models/best.pt
+!baselines/snehilsanyal_yolov8n_css/models/yolov8n.pt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

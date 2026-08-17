@@ -1,0 +1,16 @@
+{
+  "dry_run": true,
+  "weights": "C:\\GitHub\\Worker Safety PPE Detection Model\\baselines\\snehilsanyal_yolov8n_css\\models\\best.pt",
+  "onnx": null,
+  "sizes": [
+    "640x640",
+    "960x540"
+  ],
+  "warmup": 10,
+  "iters": 50,
+  "backends": [
+    "pytorch",
+    "ultralytics_ort",
+    "raw_ort"
+  ]
+}

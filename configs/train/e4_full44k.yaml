@@ -1,0 +1,15 @@
+# E4 — YOLOv8n, 50 epochs on full Combined (~44k). Confirmation / shipped detector.
+experiment: e4_full44k
+model: yolov8n.pt
+data: configs/data/combined.yaml
+subset_size: null
+epochs: 50
+imgsz: 640
+batch: 16
+seed: 42
+cos_lr: true
+patience: 15
+pretrained: true
+optimizer: auto
+fl_gamma: 0.0
+close_mosaic: 10

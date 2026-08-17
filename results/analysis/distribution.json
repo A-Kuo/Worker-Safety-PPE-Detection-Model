@@ -1,0 +1,194 @@
+[
+  {
+    "name": "combined",
+    "root": "C:\\GitHub\\Worker Safety PPE Detection Model\\data\\raw\\combined",
+    "present": false,
+    "kind": null,
+    "names": [],
+    "images_per_split": {},
+    "empty_label_images": {},
+    "box_counts": {},
+    "image_presence": {},
+    "box_counts_total": {},
+    "image_presence_total": {},
+    "bbox_area_hist": [
+      {
+        "lo": 0.0,
+        "hi": 0.01,
+        "count": 0
+      },
+      {
+        "lo": 0.01,
+        "hi": 0.04,
+        "count": 0
+      },
+      {
+        "lo": 0.04,
+        "hi": 0.09,
+        "count": 0
+      },
+      {
+        "lo": 0.09,
+        "hi": 0.25,
+        "count": 0
+      },
+      {
+        "lo": 0.25,
+        "hi": 1.01,
+        "count": 0
+      }
+    ],
+    "bbox_area_n": 0,
+    "pos_neg": {
+      "images_with_no_star": 0,
+      "images_with_positive_ppe": 0,
+      "empty_label_images": 0
+    },
+    "imbalance_flags": [],
+    "domain_note": "Combined is mostly construction / industrial mid-shot imagery with a 14-class PPE vocabulary (helmet/vest/goggles/gloves/mask plus `no_*`, person, cone, ladder, fall_detected)."
+  },
+  {
+    "name": "hardhat",
+    "root": "C:\\GitHub\\Worker Safety PPE Detection Model\\data\\raw\\hardhat",
+    "present": false,
+    "kind": null,
+    "names": [],
+    "images_per_split": {},
+    "empty_label_images": {},
+    "box_counts": {},
+    "image_presence": {},
+    "box_counts_total": {},
+    "image_presence_total": {},
+    "bbox_area_hist": [
+      {
+        "lo": 0.0,
+        "hi": 0.01,
+        "count": 0
+      },
+      {
+        "lo": 0.01,
+        "hi": 0.04,
+        "count": 0
+      },
+      {
+        "lo": 0.04,
+        "hi": 0.09,
+        "count": 0
+      },
+      {
+        "lo": 0.09,
+        "hi": 0.25,
+        "count": 0
+      },
+      {
+        "lo": 0.25,
+        "hi": 1.01,
+        "count": 0
+      }
+    ],
+    "bbox_area_n": 0,
+    "pos_neg": {
+      "images_with_no_star": 0,
+      "images_with_positive_ppe": 0,
+      "empty_label_images": 0
+    },
+    "imbalance_flags": [],
+    "domain_note": "Hard Hat Universe is a workplace helmet/head domain (~7k). `head` \u2192 `no_helmet` is an eval assumption (implicit missing helmet) and must be scored separately so it does not pollute Combined metrics."
+  },
+  {
+    "name": "construction",
+    "root": "C:\\GitHub\\Worker Safety PPE Detection Model\\data\\raw\\construction",
+    "present": false,
+    "kind": null,
+    "names": [],
+    "images_per_split": {},
+    "empty_label_images": {},
+    "box_counts": {},
+    "image_presence": {},
+    "box_counts_total": {},
+    "image_presence_total": {},
+    "bbox_area_hist": [
+      {
+        "lo": 0.0,
+        "hi": 0.01,
+        "count": 0
+      },
+      {
+        "lo": 0.01,
+        "hi": 0.04,
+        "count": 0
+      },
+      {
+        "lo": 0.04,
+        "hi": 0.09,
+        "count": 0
+      },
+      {
+        "lo": 0.09,
+        "hi": 0.25,
+        "count": 0
+      },
+      {
+        "lo": 0.25,
+        "hi": 1.01,
+        "count": 0
+      }
+    ],
+    "bbox_area_n": 0,
+    "pos_neg": {
+      "images_with_no_star": 0,
+      "images_with_positive_ppe": 0,
+      "empty_label_images": 0
+    },
+    "imbalance_flags": [],
+    "domain_note": "Construction v28 is a tiny overlapping slice (val n=114, test n=82) cloned in part from Combined. Do not merge it back into Combined without perceptual hashing. `machinery` / `vehicle` are Construction-only."
+  },
+  {
+    "name": "combined_12k",
+    "root": "C:\\GitHub\\Worker Safety PPE Detection Model\\data\\raw\\combined_12k",
+    "present": false,
+    "kind": null,
+    "names": [],
+    "images_per_split": {},
+    "empty_label_images": {},
+    "box_counts": {},
+    "image_presence": {},
+    "box_counts_total": {},
+    "image_presence_total": {},
+    "bbox_area_hist": [
+      {
+        "lo": 0.0,
+        "hi": 0.01,
+        "count": 0
+      },
+      {
+        "lo": 0.01,
+        "hi": 0.04,
+        "count": 0
+      },
+      {
+        "lo": 0.04,
+        "hi": 0.09,
+        "count": 0
+      },
+      {
+        "lo": 0.09,
+        "hi": 0.25,
+        "count": 0
+      },
+      {
+        "lo": 0.25,
+        "hi": 1.01,
+        "count": 0
+      }
+    ],
+    "bbox_area_n": 0,
+    "pos_neg": {
+      "images_with_no_star": 0,
+      "images_with_positive_ppe": 0,
+      "empty_label_images": 0
+    },
+    "imbalance_flags": [],
+    "domain_note": "Stratified 12k subset of Combined used for the E0\u2013E3 experiment grid."
+  }
+]

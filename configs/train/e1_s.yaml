@@ -1,0 +1,15 @@
+# E1 — YOLOv8s. Same subset/seed/hparams as E0; measures accuracy vs FPS.
+experiment: e1_s
+model: yolov8s.pt
+data: configs/data/combined.yaml
+subset_size: 12000
+epochs: 100
+imgsz: 640
+batch: 16
+seed: 42
+cos_lr: true
+patience: 20
+pretrained: true
+optimizer: auto
+fl_gamma: 0.0
+close_mosaic: 10
