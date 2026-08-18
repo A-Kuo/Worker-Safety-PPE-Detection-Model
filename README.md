@@ -1,231 +1,198 @@
-# Unified Multi-Domain PPE Compliance Detection
+<div align="center">
 
-YOLOv8-based personal protective equipment (PPE) detection with a **unified 14-class schema**, person–PPE compliance association, and a local FastAPI + Streamlit demo. Construction Site Safety is documented as a **third-party baseline**; Hard Hat Universe is held out for domain evaluation.
+# 🦺 Worker Safety — PPE Detection
 
-| | |
+### AI that watches for missing hard hats and safety vests, so people don't have to.
+
+![Construction PPE detection demo](baselines/snehilsanyal_yolov8n_css/assets/videoconstruc2.gif)
+
+[![Tests](https://img.shields.io/badge/tests-39%20passing-brightgreen)](tests/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey)](ATTRIBUTION.md)
+[![Model](https://img.shields.io/badge/model-YOLOv8-orange)](https://docs.ultralytics.com)
+
+**[▶️ Try the demo](#-try-it-yourself)** · **[📸 See it in action](#-see-it-in-action)** · **[🧠 Technical deep-dive](docs/TECHNICAL.md)**
+
+</div>
+
+---
+
+## 🤔 What is this?
+
+> 4,764 workers died on the job in 2020. Nearly half of all fatal workplace injuries came from construction, transportation, and material-handling work.
+> — *U.S. Occupational Safety and Health Administration*
+
+A huge share of those accidents come down to something painfully simple: **someone wasn't wearing their safety gear.** A missing hard hat. A missing vest. A moment nobody was watching.
+
+This project teaches a computer to watch instead — pointing a camera at a job site and automatically spotting **who is, and who isn't,** wearing the protective equipment they need.
+
+It doesn't replace a safety officer. It gives one an extra set of eyes that never blinks, never gets tired, and never misses a shift.
+
+---
+
+## 🎯 What it actually does
+
+Point a photo, video, or webcam at a group of people, and it will:
+
+1. **Find every person** in the frame.
+2. **Find every piece of safety gear** — hard hats, vests, goggles, gloves, masks.
+3. **Match gear to the right person** (not just "there's a helmet somewhere in this photo").
+4. **Say, in plain English, who's missing what:**
+
+   > 🟢 *Worker 0 — compliant*
+   > 🔴 *Worker 1 — missing helmet and vest*
+   > 🔴 *Worker 3 — missing helmet*
+
+That's it. Simple question, simple answer, per person, every frame.
+
+---
+
+## 📸 See it in action
+
+<table>
+<tr>
+<td width="33%">
+
+**Before**
+Raw camera frame — just people on a site.
+
+</td>
+<td width="33%">
+
+**AI looks**
+Every person and every piece of gear gets boxed and labeled.
+
+</td>
+<td width="33%">
+
+**Verdict**
+Each worker gets a compliant/violation call you can act on.
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+<img src="baselines/snehilsanyal_yolov8n_css/output/output_yolov8n_100e/construction-safety.jpg" width="45%" alt="Detected construction workers with PPE boxes" />
+<img src="baselines/snehilsanyal_yolov8n_css/output/output_yolov8n_100e/two-young-construction-workers-wearing-555864.jpg" width="45%" alt="Two workers detected wearing PPE" />
+</div>
+
+<div align="center">
+<img src="baselines/snehilsanyal_yolov8n_css/output/output_yolov8n_100e/portrait-of-woman-with-mask-and-man-with-safety-glasses-on-a-construction-HX01FH.jpg" width="45%" alt="Detected mask and safety glasses" />
+<img src="baselines/snehilsanyal_yolov8n_css/assets/ppe.webp" width="45%" alt="PPE class examples" />
+</div>
+
+*(These sample results come from the inherited baseline model — see [credits](#-credits--honesty) below.)*
+
+---
+
+## 🧠 How it thinks (without the jargon)
+
+| Step | In plain words |
 |---|---|
-| **Train schema** | Combined PPE v4 → 14 unified classes (`helmet` / `no_helmet`, …) |
-| **Inherited baseline** | Construction YOLOv8n — mAP50 **0.809**, mAP50-95 **0.507** ([docs/baseline.md](docs/baseline.md)) |
-| **Demo** | [app/README.md](app/README.md) — FastAPI + Streamlit |
-| **Credits** | [ATTRIBUTION.md](ATTRIBUTION.md) |
+| **1. Look** | A YOLOv8 object-detection model scans the image and draws a box around every person and every piece of gear it recognizes. |
+| **2. Match** | For each person, the system checks: is a hard hat box sitting on top of them? A vest box? It links gear to the person wearing it, not just "somewhere in the photo." |
+| **3. Judge** | Every worker needs a **helmet** and a **vest** at minimum. Anything missing (or an explicit "no helmet" / "no vest" detection) gets flagged as a violation. Goggles, gloves, and masks are tracked too, just not required by default. |
+| **4. Report** | The result is a short, human-readable line per worker — no dashboards to decode, no numbers to interpret. |
+
+Fourteen kinds of gear are recognized in total: helmet, vest, goggles, gloves, mask (plus their "missing" counterparts), person, safety cone, ladder, and fall-detected.
 
 ---
 
-## 1. Overview
+## 🚀 Try it yourself
 
-This repo turns construction/industrial PPE detection into a reproducible portfolio pipeline:
+You don't need to know Python to see this run — just follow along.
 
-1. **Audit** an inherited Construction Site Safety YOLOv8n baseline (not claimed as our training).
-2. **Normalize** labels onto Combined PPE’s 14-class vocabulary.
-3. **Train / evaluate** via YAML configs and scripts (E0–E4 grid; metrics pending GPU + `ROBOFLOW_API_KEY`).
-4. **Calibrate** and cross-check domains; associate PPE boxes to `person` for compliance strings.
-5. **Ship** a local API + UI for image, video, and webcam review.
+### Option 1 — The 2-minute cloud version (no install)
 
-Core library: [`src/ppe/`](src/ppe/) (`schema`, `compliance`, `inference`). Prefer `from ppe...` after `pip install -e .` (or with `src/` on `PYTHONPATH`); `src.ppe` remains a fallback in scripts/app.
+1. Open [`tests/test_e2e_colab.ipynb`](tests/test_e2e_colab.ipynb) in **[Google Colab](https://colab.research.google.com/)** (free, runs in your browser).
+2. Turn on a free GPU: `Runtime → Change runtime type → T4 GPU`.
+3. Click `Runtime → Run all`.
 
----
+You'll watch it clone the project, load the model, and detect PPE on real photos — right there in the notebook, no setup on your own machine.
 
-## 2. Motivation
+### Option 2 — Run the local web app
 
-Missed PPE on site is a leading industrial safety failure mode. OSHA and similar regimes emphasize hard hats, high-visibility vests, eye/face protection, and related gear. Computer vision can flag **missing** equipment (`no_helmet`, `no_vest`, …) in camera feeds—similar in spirit to Matroid-style visual inspection—without replacing human judgment.
-
-This project focuses on:
-
-- A **shared label schema** across datasets so metrics are comparable.
-- **Recall-first** operating points on violation classes (`no_*`).
-- An honest split between **inherited artifacts** and **original engineering**.
-
----
-
-## 3. Data
-
-| Dataset | Role | Notes |
-|---|---|---|
-| [Construction Site Safety v28](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety/dataset/28) | Inherited baseline train/eval | 10 classes; split **2605 / 114 / 82**; val n=114 is too small for strong per-class claims |
-| [Personal Protective Equipment Combined Model v4](https://universe.roboflow.com/roboflow-universe-projects/personal-protective-equipment-combined-model/dataset/4) | **Unified train set** | ~44k images, 14 classes, 70/20/10 |
-| [Hard Hat Universe](https://universe.roboflow.com/universe-datasets/hard-hat-universe-0dy7t) | **Held-out** helmet-domain eval | ~7k; not mixed into training |
-
-**Licenses:** Roboflow Universe sets used here are **CC BY 4.0** — see [ATTRIBUTION.md](ATTRIBUTION.md).
-
-**Label normalization** (Combined → unified):
-
-| Combined raw | Unified |
-|---|---|
-| Hardhat / NO-Hardhat | `helmet` / `no_helmet` |
-| Safety Vest / NO-Safety Vest | `vest` / `no_vest` |
-| Goggles / NO-Goggles | `goggles` / `no_goggles` |
-| Gloves / NO-Gloves | `gloves` / `no_gloves` |
-| Mask / NO-Mask | `mask` / `no_mask` |
-| Person / Safety Cone | `person` / `cone` |
-| Ladder / Fall-Detected | `ladder` / `fall_detected` |
-
-Construction-only `machinery` / `vehicle` stay on the Construction baseline; they are **not** in the unified model. **Boots are out of scope** (Combined has no `boots` / `no_boots`).
-
-**No Construction ↔ Combined merge.** Construction already clones imagery from Combined and other Universe sets; merging without perceptual hashing would leak train/eval. Protocol: remap separately; evaluate Construction on mapped shared classes only.
-
-Configs: [`configs/data/`](configs/data/). Distribution notes: [`docs/data_distribution.md`](docs/data_distribution.md).
-
----
-
-## 4. Model Architecture
-
-- **Baseline / primary detector:** Ultralytics **YOLOv8n** (nano) — Construction inherited weights under [`baselines/snehilsanyal_yolov8n_css/`](baselines/snehilsanyal_yolov8n_css/); unified runs use the same family.
-- **Variants in the experiment grid:** YOLOv8**s** (E1); optional **m** only if E1 and E4 finish early.
-- **Compliance layer:** `src/ppe/compliance.py` associates PPE boxes to `person` via containment / IoU and emits strings like `Worker k — missing helmet, vest`.
-- **Optional VLM:** not implemented this cycle (see §8).
-
-External reference only (not our checkpoint): [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m on Combined v4).
-
----
-
-## 5. Training & Experiments
-
-Scripts and YAML drive training; nothing is claimed as a finished Combined run until GPU jobs complete with downloaded data.
-
-| | |
-|---|---|
-| Configs | [`configs/train/`](configs/train/) — `e0_n`, `e1_s`, `e2_focal`, `e3_augs`, `e4_full44k` |
-| Entry point | `python scripts/train.py --exp e0_n` |
-| Protocol | [`docs/experiments.md`](docs/experiments.md) |
-
-**Grid (one factor at a time, fixed seed / split):**
-
-| ID | Change | Data |
-|---|---|---|
-| E0 | YOLOv8n default | Stratified Combined **12k** subset |
-| E1 | YOLOv8s | Same subset |
-| E2 | `fl_gamma=1.5` (focal) | Same subset |
-| E3 | Stronger augs (blur, brightness, crop) | Same subset |
-| E4 | YOLOv8n **50e** on full **44k** | Confirmation / shipped detector |
-
-**Metrics pending** until `ROBOFLOW_API_KEY` downloads succeed and GPU training runs finish. Do not compare Combined 14-class mAP to Construction 10-class mAP as a like-for-like win; use `SHARED_EVAL_CLASSES` for fair slices.
-
----
-
-## 6. Evaluation & Mathematical Analysis
-
-### Inherited Construction baseline (documented, not our train)
-
-From [`docs/baseline.md`](docs/baseline.md) / inherited `results.csv` (epoch 99):
-
-| Metric | Value |
-|---|---|
-| mAP@0.50 | **0.809** |
-| mAP@0.50:0.95 | **0.507** |
-| Precision | **0.900** |
-| Recall | **0.731** |
-
-Per-class Ultralytics val needs Construction images on disk (`python scripts/eval_baseline.py`). Confusion-matrix takeaways (inherited plot): `NO-*` classes leak into background — motivation for recall-first threshold sweeps.
-
-### Scripts for rigor (after Combined weights exist)
-
-| Script | Purpose |
-|---|---|
-| `scripts/eval.py` | In-domain Combined eval |
-| `scripts/eval_cross_domain.py` | Combined / Construction (mapped) / HHU tables |
-| `scripts/calibrate.py` | ECE, Brier, `no_*` confidence sweeps (target R ≥ 0.90) |
-| `scripts/benchmark.py` + `export_onnx.py` | Latency / FPS / memory (PyTorch vs ONNX) |
-
----
-
-## 7. Deployment
-
-Local demo only — see **[app/README.md](app/README.md)** for weights env vars and endpoints.
+For a proper point-and-click experience with your own photos/videos/webcam:
 
 ```bash
-# From repo root
+# 1. Get the code and install what it needs
+git clone https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model.git
+cd Worker-Safety-PPE-Detection-Model
 python -m pip install -r requirements.txt
 python -m pip install -r app/requirements.txt
-# Optional editable install for `from ppe...`:
-python -m pip install -e .
 
-# API
-uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
-# or: python -m app.api.main
-
-# UI (second terminal)
+# 2. Start the two pieces (one API, one UI)
+uvicorn app.api.main:app --reload &
 streamlit run app/ui/streamlit_app.py
 ```
 
-OpenAPI: http://127.0.0.1:8000/docs — `POST /predict/image`, `POST /predict/video`, `GET /stream` (MJPEG).
-
-Default weights: `PPE_WEIGHTS`, else first existing of `baselines/snehilsanyal_yolov8n_css/models/best.pt` or `models/best.pt`.
+A browser tab opens automatically with the **Streamlit** interface: upload a photo, a video, or use your webcam, and watch the compliance labels appear on screen. Full walk-through: [`app/README.md`](app/README.md).
 
 ---
 
-## 8. Optional VLM Layer (future)
-
-Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a labeled frame bank for retrieval (“frames with missing vests”) — Matroid-shaped multimodal search without claiming captioning SOTA. Prefer retrieval over generative theater until the detector path is solid.
-
----
-
-## 9. Future Work
-
-- Multi-object **tracking** (ByteTrack / BoT-SORT) for stable worker IDs across frames
-- **SCADA / MES** hooks for plant alarms and shift dashboards
-- **IR / thermal** cameras for low-light and outdoor night shifts
-- Optional YOLOv8m (E5) and INT8 quantization appendix after E4 latency numbers exist
-
----
-
-## 10. What I inherited vs what I built
-
-| Inherited (third-party) | Built in this repo |
-|---|---|
-| Snehil Sanyal Construction YOLOv8n weights, plots, `results.csv`, sample media | `src/ppe/` schema, compliance, inference |
-| Original Roboflow Construction notes / yaml layout | `scripts/` download → remap → subset → analyze → train → eval → calibrate → export → benchmark |
-| Artifact dump moved under `baselines/snehilsanyal_yolov8n_css/` | `configs/data`, `configs/train`, docs, tests |
-| | FastAPI + Streamlit demo under `app/` |
-| | Honest attribution and portfolio README |
-
-**Do not** present `baselines/.../models/best.pt` as a model trained here.
-
-### Citations
-
-- **Snehil Sanyal** — [Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection)
-- **Roboflow Universe** datasets above — **CC BY 4.0**
-- **Hexmon/vyra-yolo-ppe-detection** — external Combined v4 reference only
-
-Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
-
----
-
-## Repo map
+## 🧰 What's inside this repository
 
 ```text
-src/ppe/           # schema, compliance, inference
-scripts/           # pipeline CLIs (+ run_pipeline.md)
-configs/data/      # construction, combined, hardhat_eval
-configs/train/     # E0–E4 experiment YAMLs
-app/               # FastAPI + Streamlit
-docs/              # baseline, experiments, data_distribution
-baselines/         # inherited Snehil Construction artifacts
-tests/             # schema + compliance unit tests
+src/ppe/       →  The "brain": detection, PPE-to-person matching, and the compliance rules
+app/           →  The point-and-click demo (web page + API) that uses the brain above
+scripts/       →  Command-line tools for downloading data, training, and evaluating
+configs/       →  Settings files for datasets and training experiments
+baselines/     →  A borrowed, pre-trained model used as a starting reference point
+docs/          →  Deep technical notes: datasets, math, experiment results
+tests/         →  Automated checks that everything still works (see below)
 ```
 
-### End-to-end command sequence
+---
 
-See also [`scripts/run_pipeline.md`](scripts/run_pipeline.md).
+## ✅ Is it actually tested?
+
+Yes — every core piece of logic is automatically checked on every change, so a broken build never sneaks through quietly.
+
+| | |
+|---|---|
+| **39 automated tests** | run on every update, covering label mapping, PPE-to-person matching, and the detection pipeline |
+| **Runs on 3 Python versions** | 3.10, 3.11, and 3.12, via GitHub Actions |
+| **GPU tests in the cloud** | the full model + real photos are exercised in the [Colab notebook](tests/test_e2e_colab.ipynb), since GitHub's free runners don't have a GPU |
+
+Want to run the checks yourself?
 
 ```bash
-# Requires ROBOFLOW_API_KEY for downloads; GPU recommended for train/eval
-python scripts/download_datasets.py --execute
-python scripts/remap_labels.py --source data/raw/combined --out data/processed/combined --mapping combined
-python scripts/remap_labels.py --source data/raw/hardhat --out data/processed/hardhat --mapping hhu
-python scripts/remap_labels.py --source data/raw/construction --out data/processed/construction --mapping construction
-python scripts/make_subset.py --source data/raw/combined --out data/raw/combined_12k --n 12000 --seed 42
-python scripts/analyze_distribution.py
-python scripts/train.py --exp e0_n
-python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
-python scripts/calibrate.py --weights runs/train/e0_n/weights/best.pt
-python scripts/export_onnx.py --weights runs/train/e0_n/weights/best.pt
-python scripts/benchmark.py --weights runs/train/e0_n/weights/best.pt
-# Then launch app/ (see §7)
+pip install pytest pyyaml
+PYTHONPATH=src python -m pytest tests/ -v
 ```
 
-### Quick checks
+More detail (what's tested, why, and how to add more) lives in [`docs/TECHNICAL.md`](docs/TECHNICAL.md#testing).
 
-```bash
-python -c "from ppe.schema import UNIFIED_CLASS_NAMES; print(len(UNIFIED_CLASS_NAMES))"  # → 14
-pytest tests/
-```
+---
+
+## 🔭 What's next
+
+- **Tracking** — give each worker a stable ID across frames, instead of re-detecting them fresh every frame.
+- **Alerts** — hook violations into a dashboard, alarm, or notification system for live sites.
+- **Night vision** — extend detection to thermal/infrared cameras for low-light shifts.
+- **Bigger, better models** — larger YOLOv8 variants and quantized exports for faster edge deployment.
+
+---
+
+## 🙏 Credits & honesty
+
+This project is built as an honest, from-scratch engineering exercise on top of a **borrowed starting point** — not a claim that everything here was trained from zero.
+
+| What's borrowed | What's original to this repo |
+|---|---|
+| The baseline YOLOv8n model weights, training plots, and sample results, from [Snehil Sanyal's Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection) (the inspiration for this project) | The unified 14-class label schema across three different datasets |
+| The original Roboflow dataset notes | The person↔PPE matching and compliance-verdict logic |
+| | The full training/evaluation/calibration pipeline (scripts + configs) |
+| | The FastAPI + Streamlit demo app |
+| | The automated test suite and CI setup |
+
+Datasets used are from Roboflow Universe under **CC BY 4.0** — see [`ATTRIBUTION.md`](ATTRIBUTION.md) for the full license and citation details.
+
+---
+
+<div align="center">
+
+**Want the full technical picture** — dataset breakdowns, the training experiment grid, calibration math, and evaluation protocol? **→ [Read the technical deep-dive](docs/TECHNICAL.md)**
+
+</div>
