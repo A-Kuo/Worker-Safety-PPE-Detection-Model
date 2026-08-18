@@ -190,6 +190,39 @@ Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
 
 ---
 
+## Testing
+
+CI runs automatically on push to `main` and on pull requests via GitHub Actions (`.github/workflows/django.yml`).
+
+### CI tests (no GPU required)
+
+The test suite covers `schema`, `compliance`, and `inference` (mock-based) — 39 tests total. Only `pytest` and `pyyaml` are required; no ultralytics, torch, or GPU.
+
+```bash
+pip install pytest pyyaml
+PYTHONPATH=src python -m pytest tests/ -v
+```
+
+| File | Tests | What it covers |
+|---|---|---|
+| `tests/test_schema.py` | 14 | Unified 14-class names, all three raw→unified mappings, `remap_yolo_line`, `write_dataset_yaml` |
+| `tests/test_compliance.py` | 12 | Person–PPE association, containment/IoU, missing/violation logic, label formatting |
+| `tests/test_inference.py` | 13 | `PPEDetector` via mocked YOLO (model loading, `predict_image`, `predict_and_comply`, conf/device forwarding, error paths) |
+
+CI matrix: Python 3.10, 3.11, 3.12 on `ubuntu-latest`.
+
+### End-to-end tests (GPU required — Google Colab)
+
+Tests that need real model weights, ultralytics, torch, and GPU hardware are in [`tests/test_e2e_colab.ipynb`](tests/test_e2e_colab.ipynb). Open the notebook in [Google Colab](https://colab.research.google.com/) with a T4 GPU runtime.
+
+The notebook covers:
+- Real model loading from `baselines/.../models/best.pt`
+- Single-image and batch inference on bundled source images
+- `predict_and_comply` annotated image output with visual inspection
+- FastAPI endpoint smoke tests (`GET /health`, `POST /predict/image`)
+
+---
+
 ## Repo map
 
 ```text
@@ -200,7 +233,7 @@ configs/train/     # E0–E4 experiment YAMLs
 app/               # FastAPI + Streamlit
 docs/              # baseline, experiments, data_distribution
 baselines/         # inherited Snehil Construction artifacts
-tests/             # schema + compliance unit tests
+tests/             # schema, compliance, inference unit tests + Colab e2e notebook
 ```
 
 ### End-to-end command sequence
@@ -227,5 +260,5 @@ python scripts/benchmark.py --weights runs/train/e0_n/weights/best.pt
 
 ```bash
 python -c "from ppe.schema import UNIFIED_CLASS_NAMES; print(len(UNIFIED_CLASS_NAMES))"  # → 14
-pytest tests/
+PYTHONPATH=src python -m pytest tests/ -v
 ```

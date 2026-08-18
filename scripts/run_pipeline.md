@@ -7,6 +7,10 @@ Run from the **repository root**. Downloads need `ROBOFLOW_API_KEY`. Training/ev
 python -m pip install -r requirements.txt
 python -m pip install -e .   # enables `from ppe...`
 
+# 0.5) Run unit tests (no GPU / model weights needed)
+pip install pytest pyyaml
+PYTHONPATH=src python -m pytest tests/ -v
+
 # 1) Download (omit --execute for dry-run)
 python scripts/download_datasets.py --dry-run
 python scripts/download_datasets.py --execute
@@ -46,5 +50,15 @@ Inherited Construction baseline audit (no Combined download required if weights 
 ```bash
 python scripts/eval_baseline.py
 ```
+
+## Testing
+
+Unit tests run in CI on every push/PR (Python 3.10–3.12, no GPU needed):
+
+```bash
+PYTHONPATH=src python -m pytest tests/ -v
+```
+
+End-to-end tests requiring GPU + model weights: open [`tests/test_e2e_colab.ipynb`](../tests/test_e2e_colab.ipynb) in Google Colab with a T4 GPU runtime.
 
 Docs: [docs/baseline.md](../docs/baseline.md), [docs/experiments.md](../docs/experiments.md), [docs/data_distribution.md](../docs/data_distribution.md), [app/README.md](../app/README.md).
