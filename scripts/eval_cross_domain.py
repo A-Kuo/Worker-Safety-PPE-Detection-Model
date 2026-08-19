@@ -57,7 +57,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--iou", type=float, default=0.5)
-    parser.add_argument("--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "cross_domain.json")
+    parser.add_argument(
+        "--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "cross_domain.json"
+    )
     return parser.parse_args()
 
 
@@ -82,7 +84,16 @@ def _mean(rows: list[dict], key: str) -> float | None:
     return sum(vals) / len(vals)
 
 
-def eval_domain(name: str, weights: Path, data: Path | None, split: str, imgsz: int, conf: float, iou: float, shared: list[str]) -> dict[str, Any]:
+def eval_domain(
+    name: str,
+    weights: Path,
+    data: Path | None,
+    split: str,
+    imgsz: int,
+    conf: float,
+    iou: float,
+    shared: list[str],
+) -> dict[str, Any]:
     if data is None:
         return {
             "domain": name,
@@ -92,7 +103,12 @@ def eval_domain(name: str, weights: Path, data: Path | None, split: str, imgsz: 
     try:
         metrics = ultralytics_val(weights, data, split, imgsz, conf, iou)
     except Exception as exc:  # noqa: BLE001
-        return {"domain": name, "data": str(data), "skipped": True, "reason": f"{type(exc).__name__}: {exc}"}
+        return {
+            "domain": name,
+            "data": str(data),
+            "skipped": True,
+            "reason": f"{type(exc).__name__}: {exc}",
+        }
 
     per_class = metrics["per_class"]
     if name == "construction":
@@ -137,7 +153,10 @@ def main() -> int:
 
     domains = {
         "combined": (_resolve_domain("combined", args.combined_data), args.split),
-        "construction": (_resolve_domain("construction", args.construction_data), args.construction_split),
+        "construction": (
+            _resolve_domain("construction", args.construction_data),
+            args.construction_split,
+        ),
         "hhu": (_resolve_domain("hhu", args.hhu_data), args.hhu_split),
     }
 
@@ -149,7 +168,10 @@ def main() -> int:
         if row.get("skipped"):
             print(f"  skipped: {row.get('reason')}")
         else:
-            print(f"  mAP50={row.get('map50')} R={row.get('recall')} classes={len(row.get('per_class') or [])}")
+            print(
+                f"  mAP50={row.get('map50')} R={row.get('recall')} "
+                f"classes={len(row.get('per_class') or [])}"
+            )
 
     payload = {
         "weights": str(weights),
@@ -158,7 +180,8 @@ def main() -> int:
         "domains": results,
         "tradeoff_note": (
             "One general Combined model vs a helmet-specialist. "
-            "This script only evaluates the general model. Do not train a specialist unless E4 finished early."
+            "This evaluates the general model only. A domain specialist is out of",
+            "scope unless E4 finishes early.",
         ),
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -168,7 +191,16 @@ def main() -> int:
     table_rows = []
     for row in results:
         if row.get("skipped"):
-            table_rows.append([row["domain"], "pending eval", "pending eval", "pending eval", "pending eval", row.get("reason", "")])
+            table_rows.append(
+                [
+                    row["domain"],
+                    "pending eval",
+                    "pending eval",
+                    "pending eval",
+                    "pending eval",
+                    row.get("reason", ""),
+                ]
+            )
         else:
             table_rows.append(
                 [
@@ -186,7 +218,8 @@ def main() -> int:
             "",
             HHU_ASSUMPTION,
             "",
-            "Construction numbers use `SHARED_EVAL_CLASSES` only. Do not compare raw 10-class vs 14-class mAP.",
+            "Construction numbers cover `SHARED_EVAL_CLASSES` only; raw 10-class and",
+            "14-class mAP are not comparable.",
             "",
             _md_table(["domain", "mAP50", "mAP50-95", "P", "R", "notes"], table_rows),
             "",

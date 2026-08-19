@@ -70,7 +70,15 @@ SHARED_EVAL_CLASSES: list[str] = [
     "cone",
 ]
 
+# Every raw vocabulary the detector might report, folded into one lookup.
+RAW_TO_UNIFIED: dict[str, str] = {
+    **COMBINED_RAW_TO_UNIFIED,
+    **CONSTRUCTION_TO_UNIFIED,
+    **HHU_TO_UNIFIED,
+}
+
 _UNIFIED_INDEX: dict[str, int] = {name: i for i, name in enumerate(UNIFIED_CLASS_NAMES)}
+_RAW_FOLDED: dict[str, str] = {k.casefold(): v for k, v in RAW_TO_UNIFIED.items()}
 
 
 def unified_id(name: str) -> int:
@@ -79,6 +87,18 @@ def unified_id(name: str) -> int:
         return _UNIFIED_INDEX[name]
     except KeyError as exc:
         raise KeyError(f"Unknown unified class: {name!r}") from exc
+
+
+def unify_name(name: str) -> str:
+    """Map a dataset-specific class name onto the unified vocabulary.
+
+    Names already in the unified set pass through, and anything unrecognised is
+    returned unchanged so an unexpected class shows up in output instead of
+    silently disappearing.
+    """
+    if name in _UNIFIED_INDEX:
+        return name
+    return _RAW_FOLDED.get(name.casefold(), name)
 
 
 def remap_yolo_line(line: str, raw_names: list[str], mapping: dict[str, str]) -> str | None:

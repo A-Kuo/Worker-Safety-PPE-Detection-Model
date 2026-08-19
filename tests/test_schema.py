@@ -8,10 +8,12 @@ from ppe.schema import (
     COMBINED_RAW_TO_UNIFIED,
     CONSTRUCTION_TO_UNIFIED,
     HHU_TO_UNIFIED,
+    RAW_TO_UNIFIED,
     SHARED_EVAL_CLASSES,
     UNIFIED_CLASS_NAMES,
     remap_yolo_line,
     unified_id,
+    unify_name,
     write_dataset_yaml,
 )
 
@@ -125,7 +127,9 @@ def test_remap_combined_fall_detected():
 
 
 def test_remap_construction_drops_machinery_and_vehicle():
-    machinery = remap_yolo_line("8 0.5 0.5 0.1 0.1", CONSTRUCTION_RAW_NAMES, CONSTRUCTION_TO_UNIFIED)
+    machinery = remap_yolo_line(
+        "8 0.5 0.5 0.1 0.1", CONSTRUCTION_RAW_NAMES, CONSTRUCTION_TO_UNIFIED
+    )
     vehicle = remap_yolo_line("9 0.5 0.5 0.2 0.2", CONSTRUCTION_RAW_NAMES, CONSTRUCTION_TO_UNIFIED)
     assert machinery is None
     assert vehicle is None
@@ -148,8 +152,37 @@ def test_remap_hhu_head_and_hiviz():
 def test_remap_empty_and_out_of_range_dropped():
     assert remap_yolo_line("", COMBINED_RAW_NAMES, COMBINED_RAW_TO_UNIFIED) is None
     assert remap_yolo_line("   ", COMBINED_RAW_NAMES, COMBINED_RAW_TO_UNIFIED) is None
-    assert remap_yolo_line("99 0.1 0.1 0.1 0.1", COMBINED_RAW_NAMES, COMBINED_RAW_TO_UNIFIED) is None
+    assert (
+        remap_yolo_line("99 0.1 0.1 0.1 0.1", COMBINED_RAW_NAMES, COMBINED_RAW_TO_UNIFIED) is None
+    )
     assert remap_yolo_line("not-a-line", COMBINED_RAW_NAMES, COMBINED_RAW_TO_UNIFIED) is None
+
+
+def test_unify_name_passes_unified_names_through():
+    assert unify_name("no_helmet") == "no_helmet"
+    assert unify_name("person") == "person"
+
+
+def test_unify_name_maps_each_dataset_vocabulary():
+    assert unify_name("Hardhat") == "helmet"
+    assert unify_name("NO-Safety Vest") == "no_vest"
+    assert unify_name("hi-viz vest") == "vest"
+    assert unify_name("head") == "no_helmet"
+
+
+def test_unify_name_is_case_insensitive():
+    assert unify_name("HARDHAT") == "helmet"
+    assert unify_name("safety cone") == "cone"
+
+
+def test_unify_name_leaves_unknown_classes_visible():
+    assert unify_name("forklift") == "forklift"
+
+
+def test_raw_lookup_covers_all_three_datasets():
+    for mapping in (COMBINED_RAW_TO_UNIFIED, CONSTRUCTION_TO_UNIFIED, HHU_TO_UNIFIED):
+        assert mapping.items() <= RAW_TO_UNIFIED.items()
+    assert set(RAW_TO_UNIFIED.values()) <= set(UNIFIED_CLASS_NAMES)
 
 
 def test_write_dataset_yaml(tmp_path):

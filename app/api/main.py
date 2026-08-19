@@ -1,7 +1,8 @@
-"""FastAPI demo for PPE detection and per-worker compliance.
+"""HTTP service around the PPE pipeline.
 
-App extras (also listed in ``app/requirements.txt``):
-fastapi, uvicorn, python-multipart, streamlit, opencv-python-headless
+Endpoints cover the three shapes a site integration tends to need: score one
+frame, score an uploaded clip, or pull a live MJPEG preview. Extra deps for
+this layer are in ``app/requirements.txt``.
 """
 
 from __future__ import annotations
@@ -10,7 +11,6 @@ import base64
 import os
 import sys
 import tempfile
-import threading
 import time
 import uuid
 from collections import Counter
@@ -20,7 +20,7 @@ from typing import Any
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -31,50 +31,29 @@ from app.media import (  # noqa: E402
     DEFAULT_MAX_VIDEO_SECONDS,
     decode_image_bytes,
     encode_jpeg,
-    frame_stride,
     iter_capped_frames,
-    open_capture,
-    open_video_writer,
-    parse_stream_source,
-    video_meta,
 )
-from app.paths import CLIP_DIR, ensure_src_on_path, resolve_weights_path  # noqa: E402
-from app.runtime import IMPORT_ERROR, build_detector, default_device  # noqa: E402
+from app.paths import CLIP_DIR, ensure_src_on_path  # noqa: E402
+from app.runtime import (  # noqa: E402
+    PIPELINE_LOCK,
+    get_pipeline,
+    runtime_status,
+)
 
 ensure_src_on_path()
-try:
-    from ppe.compliance import Detection, WorkerCompliance, associate_ppe_to_persons  # noqa: E402
-    from ppe.inference import PPEDetector  # noqa: E402
-except ImportError:  # package missing; /health reports not_ready
-    from app.runtime import Detection, PPEDetector, WorkerCompliance, associate_ppe_to_persons  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# Detector cache (reload only when weights change; conf is updated in place)
-# ---------------------------------------------------------------------------
-_detector_lock = threading.Lock()
-_detector = None
-_detector_weights: str | None = None
-
-
-def _apply_conf(detector: Any, conf: float) -> None:
-    detector.conf = float(conf)
+from ppe import __version__  # noqa: E402
+from ppe.draw import annotate  # noqa: E402
+from ppe.schema import UNIFIED_CLASS_NAMES  # noqa: E402
+from ppe.sources import (  # noqa: E402
+    SourceUnavailable,
+    capture_info,
+    frame_stride,
+    open_capture,
+    open_writer,
+)
 
 
-def get_detector(conf: float = 0.25, weights: str | None = None) -> PPEDetector:
-    global _detector, _detector_weights
-    path = str(resolve_weights_path(weights))
-    with _detector_lock:
-        if _detector is None or _detector_weights != path:
-            _detector = build_detector(path, conf=conf, device=default_device())
-            _detector_weights = path
-        else:
-            _apply_conf(_detector, conf)
-        return _detector
-
-
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
 class DetectionOut(BaseModel):
     cls_name: str
     conf: float
@@ -88,14 +67,16 @@ class WorkerOut(BaseModel):
     missing: list[str]
     violations: list[str]
     label: str
+    compliant: bool
 
 
 class HealthOut(BaseModel):
     status: str
     ready: bool
+    version: str
     weights: str
     weights_exists: bool
-    ppe_package: bool
+    backend: str
     device: str | None = None
     detail: str | None = None
 
@@ -104,6 +85,7 @@ class ImagePredictOut(BaseModel):
     detections: list[DetectionOut]
     compliance: list[WorkerOut]
     labels: list[str]
+    latency_ms: float
     annotated_jpeg_base64: str | None = None
 
 
@@ -117,50 +99,19 @@ class VideoPredictOut(BaseModel):
     violation_frames: int
     violation_counts: dict[str, int]
     sample_labels: list[str]
+    events: list[str] = Field(default_factory=list)
+    latency: dict[str, float] = Field(default_factory=dict)
     annotated_path: str | None = None
     annotated_url: str | None = None
 
 
-def _xyxy_list(box: Any) -> list[float]:
-    return [float(v) for v in box]
-
-
-def detection_to_out(det: Detection) -> DetectionOut:
-    return DetectionOut(
-        cls_name=str(det.cls_name),
-        conf=float(det.conf),
-        xyxy=_xyxy_list(det.xyxy),
-    )
-
-
-def worker_to_out(worker: WorkerCompliance) -> WorkerOut:
-    return WorkerOut(
-        worker_id=int(worker.worker_id),
-        bbox=_xyxy_list(worker.bbox),
-        present=list(worker.present),
-        missing=list(worker.missing),
-        violations=list(worker.violations),
-        label=str(worker.label),
-    )
-
-
-def _clamp_conf(conf: float) -> float:
-    if conf <= 0 or conf >= 1:
-        raise HTTPException(status_code=400, detail="conf must be between 0 and 1 (exclusive).")
-    return float(conf)
-
-
-# ---------------------------------------------------------------------------
-# App
-# ---------------------------------------------------------------------------
 app = FastAPI(
     title="PPE Detection API",
     description=(
-        "Local demo: detect PPE, associate gear to each person, and return "
-        "compliance labels such as “Worker 12 — missing helmet and vest”. "
-        "GET /stream returns MJPEG; a missing camera is HTTP 503."
+        "Detect PPE, attach it to each person in frame, and report who is out of "
+        "compliance. GET /stream returns MJPEG; a source that cannot be opened is a 503."
     ),
-    version="0.1.0",
+    version=__version__,
 )
 
 app.add_middleware(
@@ -174,187 +125,153 @@ app.add_middleware(
 
 @app.get("/", tags=["meta"])
 def root() -> dict[str, str]:
-    return {"service": "ppe-detection", "docs": "/docs", "health": "/health"}
+    return {"service": "ppe-detection", "version": __version__, "docs": "/docs"}
 
 
 @app.get("/health", response_model=HealthOut, tags=["meta"])
 def health() -> HealthOut:
-    weights = resolve_weights_path()
-    exists = weights.is_file()
-    package_ok = IMPORT_ERROR is None
-    ready = package_ok and exists
-    detail = None
-    if not package_ok:
-        detail = f"ppe import failed: {IMPORT_ERROR}"
-    elif not exists:
-        detail = f"Weights missing at {weights}. Set PPE_WEIGHTS."
+    status = runtime_status()
     return HealthOut(
-        status="ok" if ready else "not_ready",
-        ready=ready,
-        weights=str(weights),
-        weights_exists=exists,
-        ppe_package=package_ok,
-        device=default_device(),
-        detail=detail,
+        status="ok" if status.ready else "not_ready",
+        ready=status.ready,
+        version=__version__,
+        weights=str(status.weights),
+        weights_exists=status.weights_exist,
+        backend=status.backend,
+        device=status.device,
+        detail=status.detail,
     )
+
+
+@app.get("/classes", tags=["meta"])
+def classes() -> dict[str, Any]:
+    return {"count": len(UNIFIED_CLASS_NAMES), "names": UNIFIED_CLASS_NAMES}
+
+
+@app.get("/metrics", tags=["meta"])
+def metrics() -> dict[str, Any]:
+    """Latency and tracker state for whatever the process has served so far."""
+    try:
+        pipeline = get_pipeline()
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return pipeline.stats()
 
 
 @app.post("/predict/image", response_model=ImagePredictOut, tags=["predict"])
 async def predict_image(
-    file: UploadFile = File(..., description="JPEG/PNG/WebP frame"),
-    conf: float = Query(0.25, description="Confidence threshold"),
-    return_image: bool = Query(False, description="Include annotated JPEG as base64"),
+    file: UploadFile = File(..., description="JPEG, PNG, or WebP frame"),
+    conf: float = Query(0.25, gt=0, lt=1, description="Confidence threshold"),
+    return_image: bool = Query(False, description="Include an annotated JPEG as base64"),
 ) -> ImagePredictOut:
-    """Multipart image → detections, per-worker compliance, optional annotated JPEG."""
-    conf = _clamp_conf(conf)
     try:
-        payload = await file.read()
-        image = decode_image_bytes(payload)
+        image = decode_image_bytes(await file.read())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    try:
-        detector = get_detector(conf=conf)
-        with _detector_lock:
-            detections = detector.predict_image(image)
-            workers = associate_ppe_to_persons(detections)
-            annotated = None
-            if return_image:
-                annotated, workers = detector.predict_and_comply(image)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Inference failed: {exc}") from exc
+    pipeline = _pipeline_or_503(conf)
+    with PIPELINE_LOCK:
+        # A still is not part of a stream, so it must not inherit track ids.
+        pipeline.reset()
+        result = pipeline.process(image)
+        annotated = annotate(image, result.detections, result.workers) if return_image else None
 
-    encoded = None
-    if return_image and annotated is not None:
-        encoded = base64.b64encode(encode_jpeg(annotated)).decode("ascii")
-
-    compliance = [worker_to_out(w) for w in workers]
+    encoded = (
+        base64.b64encode(encode_jpeg(annotated)).decode("ascii") if annotated is not None else None
+    )
+    workers = [WorkerOut(**worker.as_dict()) for worker in result.workers]
     return ImagePredictOut(
-        detections=[detection_to_out(d) for d in detections],
-        compliance=compliance,
-        labels=[w.label for w in compliance],
+        detections=[
+            DetectionOut(cls_name=d.cls_name, conf=d.conf, xyxy=list(d.xyxy))
+            for d in result.detections
+        ],
+        compliance=workers,
+        labels=[worker.label for worker in workers],
+        latency_ms=round(result.latency_ms, 3),
         annotated_jpeg_base64=encoded,
     )
 
 
 @app.post("/predict/video", response_model=VideoPredictOut, tags=["predict"])
 async def predict_video(
-    file: UploadFile = File(..., description="Video file (mp4, avi, mov, …)"),
-    conf: float = Query(0.25, description="Confidence threshold"),
-    return_clip: bool = Query(False, description="Write an annotated MP4 under output/app/"),
-    max_frames: int = Query(
-        DEFAULT_MAX_VIDEO_FRAMES,
-        ge=1,
-        le=2000,
-        description="Hard cap on inferred frames (long clips are strided)",
-    ),
-    max_seconds: float = Query(
-        DEFAULT_MAX_VIDEO_SECONDS,
-        ge=1,
-        le=300,
-        description="Stop reading after this many source seconds",
-    ),
+    file: UploadFile = File(..., description="Video file (mp4, avi, mov)"),
+    conf: float = Query(0.25, gt=0, lt=1, description="Confidence threshold"),
+    return_clip: bool = Query(False, description="Write an annotated mp4 under output/app/"),
+    max_frames: int = Query(DEFAULT_MAX_VIDEO_FRAMES, ge=1, le=2000),
+    max_seconds: float = Query(DEFAULT_MAX_VIDEO_SECONDS, ge=1, le=300),
 ) -> VideoPredictOut:
-    """Upload a video, infer a capped/strided subset, return a compliance summary."""
-    conf = _clamp_conf(conf)
+    """Score a capped, strided sample of an uploaded clip and summarise it."""
     suffix = Path(file.filename or "upload.mp4").suffix or ".mp4"
     tmp_path: str | None = None
     cap = None
     writer = None
+
     try:
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
             tmp.write(await file.read())
             tmp_path = tmp.name
 
-        cap = open_capture(tmp_path)
-        if not cap.isOpened():
-            raise HTTPException(status_code=400, detail="Could not open the uploaded video.")
-
-        meta = video_meta(cap)
-        source_fps = float(meta["fps"])
-        frame_count = int(meta["frame_count"])
-        stride = frame_stride(frame_count, max_frames)
-
         try:
-            detector = get_detector(conf=conf)
-        except (FileNotFoundError, RuntimeError) as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            cap = open_capture(tmp_path)
+        except SourceUnavailable as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        annotated_path: Path | None = None
-        if return_clip:
-            CLIP_DIR.mkdir(parents=True, exist_ok=True)
-            annotated_path = CLIP_DIR / f"{uuid.uuid4().hex}.mp4"
+        info = capture_info(cap, tmp_path)
+        stride = frame_stride(info.frame_count, max_frames)
+        pipeline = _pipeline_or_503(conf)
 
-        violation_counts: Counter[str] = Counter()
-        sample_labels: list[str] = []
-        seen_labels: set[str] = set()
-        frames_processed = 0
+        annotated_path = CLIP_DIR / f"{uuid.uuid4().hex}.mp4" if return_clip else None
+        counts: Counter[str] = Counter()
+        labels: list[str] = []
+        seen: set[str] = set()
+        events: list[str] = []
+        processed = 0
         workers_max = 0
         violation_frames = 0
-        size: tuple[int, int] | None = None
 
-        for _index, frame in iter_capped_frames(
-            cap, max_frames=max_frames, max_seconds=max_seconds
-        ):
-            if size is None:
-                h, w = frame.shape[:2]
-                size = (w, h)
+        with PIPELINE_LOCK:
+            pipeline.reset()
+            for _index, frame, timestamp in iter_capped_frames(
+                cap, max_frames=max_frames, max_seconds=max_seconds
+            ):
+                result = pipeline.process(frame, timestamp)
+                processed += 1
+                workers_max = max(workers_max, len(result.workers))
+                if any(worker.violations for worker in result.workers):
+                    violation_frames += 1
+                for worker in result.workers:
+                    counts.update(worker.violations)
+                    if worker.label not in seen and len(labels) < 50:
+                        seen.add(worker.label)
+                        labels.append(worker.label)
+                events.extend(event.describe() for event in result.events)
+
                 if annotated_path is not None:
-                    writer = open_video_writer(
-                        annotated_path,
-                        fps=max(source_fps / stride, 1.0),
-                        size=size,
-                    )
-
-            with _detector_lock:
-                if return_clip:
-                    annotated, workers = detector.predict_and_comply(frame)
-                    if writer is not None:
-                        writer.write(annotated)
-                else:
-                    detections = detector.predict_image(frame)
-                    workers = associate_ppe_to_persons(detections)
-
-            frames_processed += 1
-            workers_max = max(workers_max, len(workers))
-            frame_violation = False
-            for worker in workers:
-                if worker.violations or worker.missing:
-                    frame_violation = True
-                for item in worker.violations:
-                    violation_counts[str(item)] += 1
-                if worker.label not in seen_labels and len(sample_labels) < 50:
-                    seen_labels.add(worker.label)
-                    sample_labels.append(worker.label)
-            if frame_violation:
-                violation_frames += 1
+                    if writer is None:
+                        height, width = frame.shape[:2]
+                        writer = open_writer(annotated_path, info.fps / stride, (width, height))
+                    writer.write(annotate(frame, result.detections, result.workers))
+            latency = pipeline.latency.as_dict()
 
         if writer is not None:
             writer.release()
             writer = None
 
-        clip_url = None
-        clip_str = None
-        if annotated_path is not None and annotated_path.is_file():
-            clip_str = str(annotated_path)
-            clip_url = f"/clips/{annotated_path.name}"
-
+        clip_ready = annotated_path is not None and annotated_path.is_file()
         return VideoPredictOut(
-            source_fps=source_fps,
-            frame_count=frame_count,
-            frames_processed=frames_processed,
+            source_fps=info.fps,
+            frame_count=info.frame_count,
+            frames_processed=processed,
             stride=stride,
-            capped=frames_processed < frame_count if frame_count > 0 else False,
+            capped=processed < info.frame_count if info.frame_count > 0 else False,
             workers_per_frame_max=workers_max,
             violation_frames=violation_frames,
-            violation_counts=dict(violation_counts),
-            sample_labels=sample_labels,
-            annotated_path=clip_str,
-            annotated_url=clip_url,
+            violation_counts=dict(counts),
+            sample_labels=labels,
+            events=events[:50],
+            latency={k: float(v) for k, v in latency.items()},
+            annotated_path=str(annotated_path) if clip_ready else None,
+            annotated_url=f"/clips/{annotated_path.name}" if clip_ready else None,
         )
     except HTTPException:
         raise
@@ -371,7 +288,7 @@ async def predict_video(
 
 @app.get("/clips/{name}", tags=["predict"])
 def download_clip(name: str) -> FileResponse:
-    """Serve an annotated clip written by ``POST /predict/video?return_clip=true``."""
+    """Serve a clip written by ``POST /predict/video?return_clip=true``."""
     if Path(name).name != name or not name.endswith(".mp4"):
         raise HTTPException(status_code=400, detail="Invalid clip name.")
     path = CLIP_DIR / name
@@ -382,57 +299,41 @@ def download_clip(name: str) -> FileResponse:
 
 @app.get("/stream", tags=["stream"])
 def stream(
-    source: str | None = Query(
-        None,
-        description="Webcam index (default 0), RTSP URL, or video file path",
-    ),
-    conf: float = Query(0.25, description="Confidence threshold"),
-    max_fps: float = Query(12.0, ge=1, le=30, description="MJPEG send cap"),
+    source: str | None = Query(None, description="Camera index, RTSP URL, or file path"),
+    conf: float = Query(0.25, gt=0, lt=1),
+    max_fps: float = Query(12.0, ge=1, le=30, description="Send rate cap"),
 ) -> StreamingResponse:
     """MJPEG stream with boxes and compliance overlays.
 
-    Returns **503** when the webcam index or ``source`` cannot be opened
-    (typical on headless hosts with no camera).
+    Unlike the upload endpoints this keeps tracker state, so alerts debounce
+    across frames the way they would on a device.
     """
-    conf = _clamp_conf(conf)
-    parsed = parse_stream_source(source)
-    cap = open_capture(parsed)
-    if not cap.isOpened():
-        cap.release()
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "No camera or media source available. "
-                "Use ?source=0 for the default webcam, ?source=rtsp://host/stream "
-                "for RTSP, or ?source=C:/path/video.mp4 for a file. "
-                "Headless machines without a camera always return 503 for webcam indexes."
-            ),
-        )
-
     try:
-        detector = get_detector(conf=conf)
-    except (FileNotFoundError, RuntimeError) as exc:
-        cap.release()
+        cap = open_capture(source)
+    except SourceUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    min_interval = 1.0 / float(max_fps)
+    try:
+        pipeline = _pipeline_or_503(conf)
+    except HTTPException:
+        cap.release()
+        raise
 
-    def frames() -> Any:
+    interval = 1.0 / float(max_fps)
+
+    def frames():
         try:
             while True:
                 started = time.perf_counter()
                 ok, frame = cap.read()
                 if not ok or frame is None:
                     break
-                with _detector_lock:
-                    annotated, _workers = detector.predict_and_comply(frame)
+                with PIPELINE_LOCK:
+                    result = pipeline.process(frame)
+                    annotated = annotate(frame, result.detections, result.workers)
                 jpeg = encode_jpeg(annotated, quality=75)
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n"
-                )
-                elapsed = time.perf_counter() - started
-                leftover = min_interval - elapsed
+                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n"
+                leftover = interval - (time.perf_counter() - started)
                 if leftover > 0:
                     time.sleep(leftover)
         finally:
@@ -445,9 +346,19 @@ def stream(
     )
 
 
+def _pipeline_or_503(conf: float):
+    try:
+        return get_pipeline(conf=conf)
+    except (FileNotFoundError, RuntimeError, ImportError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 if __name__ == "__main__":
     import uvicorn
 
-    host = os.environ.get("PPE_API_HOST", "0.0.0.0")
-    port = int(os.environ.get("PPE_API_PORT", "8000"))
-    uvicorn.run("app.api.main:app", host=host, port=port, reload=True)
+    uvicorn.run(
+        "app.api.main:app",
+        host=os.environ.get("PPE_API_HOST", "127.0.0.1"),
+        port=int(os.environ.get("PPE_API_PORT", "8000")),
+        reload=True,
+    )

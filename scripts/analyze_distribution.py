@@ -8,6 +8,7 @@ Writes ``results/analysis/`` plots (if matplotlib is available),
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from collections import Counter
@@ -39,20 +40,21 @@ DATASET_DEFAULTS = {
 
 DOMAIN_NOTES = {
     "combined": (
-        "Combined is mostly construction / industrial mid-shot imagery with a 14-class PPE vocabulary "
-        "(helmet/vest/goggles/gloves/mask plus `no_*`, person, cone, ladder, fall_detected)."
+        "Combined is mostly construction and industrial mid-shot imagery, on a "
+        "14-class vocabulary: helmet, vest, goggles, gloves, mask and their `no_*` "
+        "counterparts, plus person, cone, ladder, fall_detected."
     ),
     "hardhat": (
-        "Hard Hat Universe is a workplace helmet/head domain (~7k). "
-        "`head` → `no_helmet` is an eval assumption (implicit missing helmet) and must be scored separately "
-        "so it does not pollute Combined metrics."
+        "Hard Hat Universe is a workplace helmet and head domain of roughly 7k "
+        "images. Reading `head` as `no_helmet` is an assumption, so it is scored "
+        "separately and kept out of Combined metrics."
     ),
     "construction": (
-        "Construction v28 is a tiny overlapping slice (val n=114, test n=82) cloned in part from Combined. "
-        "Do not merge it back into Combined without perceptual hashing. "
-        "`machinery` / `vehicle` are Construction-only."
+        "Construction v28 is a small overlapping slice (val n=114, test n=82), "
+        "partly cloned from Combined. Merging it back needs perceptual hashing "
+        "first. `machinery` and `vehicle` are Construction-only."
     ),
-    "combined_12k": "Stratified 12k subset of Combined used for the E0–E3 experiment grid.",
+    "combined_12k": "Stratified 12k subset of Combined used for the E0-E3 experiment grid.",
 }
 
 EXPECTED_THIN = ("fall_detected", "no_goggles", "gloves", "no_gloves")
@@ -60,7 +62,9 @@ EXPECTED_THIN = ("fall_detected", "no_goggles", "gloves", "no_gloves")
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--datasets", nargs="+", default=["combined", "hardhat", "construction", "combined_12k"])
+    parser.add_argument(
+        "--datasets", nargs="+", default=["combined", "hardhat", "construction", "combined_12k"]
+    )
     parser.add_argument("--out-json", type=Path, default=ANALYSIS_DIR / "distribution.json")
     parser.add_argument("--out-md", type=Path, default=DOCS_PATH)
     return parser.parse_args()
@@ -94,9 +98,13 @@ def analyze_dataset(name: str, root: Path) -> dict:
                 continue
             list_path = Path(rel)
             if not list_path.is_absolute():
-                list_path = (Path(payload.get("path", dataset_root)) / rel)
+                list_path = Path(payload.get("path", dataset_root)) / rel
             if list_path.suffix == ".txt" and list_path.exists():
-                images = [Path(line.strip()) for line in list_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+                images = [
+                    Path(line.strip())
+                    for line in list_path.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
                 splits[split_key] = images  # type: ignore[assignment]
 
     box_counts: dict[str, Counter[str]] = {}
@@ -105,7 +113,18 @@ def analyze_dataset(name: str, root: Path) -> dict:
     empty_images: dict[str, int] = {}
     areas: list[float] = []
     pos_neg = {"images_with_no_star": 0, "images_with_positive_ppe": 0, "empty_label_images": 0}
-    no_star_tokens = {"no_helmet", "no_vest", "no_goggles", "no_gloves", "no_mask", "no-hardhat", "no-mask", "no-safety vest", "no-goggles", "no-gloves"}
+    no_star_tokens = {
+        "no_helmet",
+        "no_vest",
+        "no_goggles",
+        "no_gloves",
+        "no_mask",
+        "no-hardhat",
+        "no-mask",
+        "no-safety vest",
+        "no-goggles",
+        "no-gloves",
+    }
     pos_tokens = {"helmet", "hardhat", "vest", "safety vest", "goggles", "gloves", "mask"}
 
     normalized_splits: dict[str, list[Path]] = {}
@@ -153,9 +172,7 @@ def analyze_dataset(name: str, root: Path) -> dict:
     if total_boxes:
         mx, mn = max(total_boxes.values()), min(total_boxes.values())
         if mn == 0 or mx / max(mn, 1) >= 10:
-            imbalance.append(
-                f"Box-count ratio max/min = {mx}/{mn} = {mx / max(mn, 1):.1f}x."
-            )
+            imbalance.append(f"Box-count ratio max/min = {mx}/{mn} = {mx / max(mn, 1):.1f}x.")
         total = sum(total_boxes.values())
         for cls, n in total_boxes.items():
             if n / total < 0.01:
@@ -189,7 +206,7 @@ def analyze_dataset(name: str, root: Path) -> dict:
 
 def _histogram(values: list[float], edges: tuple[float, ...]) -> list[dict]:
     buckets = []
-    for lo, hi in zip(edges, edges[1:]):
+    for lo, hi in zip(edges, edges[1:], strict=False):
         n = sum(1 for v in values if (v >= lo if lo == edges[0] else v > lo) and v <= hi)
         buckets.append({"lo": lo, "hi": hi, "count": n})
     return buckets
@@ -248,8 +265,9 @@ def render_md(reports: list[dict], plot_paths: list[str]) -> str:
     lines = [
         "# Data distribution",
         "",
-        "Run this analysis **before** any new Combined training. It is the portfolio differentiator:",
-        "class imbalance, split sizes, bbox scale, and domain shift (Combined vs HHU vs tiny Construction val).",
+        "Run before any new Combined training. It covers class imbalance, split",
+        "sizes, box scale, and the domain gap between Combined, HHU, and the small",
+        "Construction val split.",
         "",
         "## How to regenerate",
         "",
@@ -259,12 +277,16 @@ def render_md(reports: list[dict], plot_paths: list[str]) -> str:
         "python scripts/download_datasets.py --execute",
         "",
         "# 2) Remap onto the unified schema (never merge Construction into Combined)",
-        "python scripts/remap_labels.py --source data/raw/combined --out data/processed/combined --mapping combined",
-        "python scripts/remap_labels.py --source data/raw/hardhat --out data/processed/hardhat --mapping hhu",
-        "python scripts/remap_labels.py --source data/raw/construction --out data/processed/construction --mapping construction",
+        "python scripts/remap_labels.py --source data/raw/combined \\",
+        "    --out data/processed/combined --mapping combined",
+        "python scripts/remap_labels.py --source data/raw/hardhat \\",
+        "    --out data/processed/hardhat --mapping hhu",
+        "python scripts/remap_labels.py --source data/raw/construction \\",
+        "    --out data/processed/construction --mapping construction",
         "",
         "# 3) Optional 12k grid subset",
-        "python scripts/make_subset.py --source data/raw/combined --out data/raw/combined_12k --n 12000 --seed 42",
+        "python scripts/make_subset.py --source data/raw/combined \\",
+        "    --out data/raw/combined_12k --n 12000 --seed 42",
         "",
         "# 4) Counts, histograms, this document",
         "python scripts/analyze_distribution.py",
@@ -273,16 +295,20 @@ def render_md(reports: list[dict], plot_paths: list[str]) -> str:
         "Outputs: `results/analysis/distribution.json`, `results/analysis/class_counts_*.png`,",
         "`results/analysis/bbox_area_hist_*.png`, and this file.",
         "",
-        "## Domain notes (locked)",
+        "## Domain notes",
         "",
-        "- **Combined** — industrial / construction mid-shot; 14 unified classes; the only train set.",
-        "- **Hard Hat Universe** — workplace helmet/head close-to-mid shots; held-out eval. `head`→`no_helmet` is an assumption.",
-        "- **Construction v28** — tiny overlapping slice (val **n=114**). Eval-only. `machinery`/`vehicle` stay here.",
-        "- **Do not merge** Construction into Combined. Construction already cloned images from Combined.",
+        "- Combined: industrial and construction mid-shot, 14 unified classes,",
+        "  the only training set.",
+        "- Hard Hat Universe: workplace helmet and head shots, held out for eval.",
+        "  Reading `head` as `no_helmet` is an assumption.",
+        "- Construction v28: small overlapping slice (val n=114), eval only.",
+        "  `machinery` and `vehicle` stay here.",
+        "- Construction is not merged into Combined; it already clones images from it.",
         "",
         "## Expected thin Combined classes",
         "",
-        "Expect `fall_detected`, `no_goggles`, and `gloves` / `no_gloves` to be thin. Flag them before claiming per-class SOTA.",
+        "`fall_detected`, `no_goggles`, `gloves`, and `no_gloves` are all thin,",
+        "so their per-class numbers carry little weight.",
         "",
     ]
 
@@ -308,7 +334,11 @@ def render_md(reports: list[dict], plot_paths: list[str]) -> str:
             _md_table(
                 ["split", "images", "empty labels"],
                 [
-                    [split, str(report["images_per_split"].get(split, 0)), str(report["empty_label_images"].get(split, 0))]
+                    [
+                        split,
+                        str(report["images_per_split"].get(split, 0)),
+                        str(report["empty_label_images"].get(split, 0)),
+                    ]
                     for split in report["images_per_split"]
                 ],
             ),
@@ -328,11 +358,14 @@ def render_md(reports: list[dict], plot_paths: list[str]) -> str:
             )
         lines += [_md_table(["class", "boxes", "images containing class"], rows), ""]
         lines += [
-            "### BBox area histogram (normalized w×h)",
+            "### Box area histogram (normalized width x height)",
             "",
             _md_table(
                 ["bin", "count"],
-                [[f"{b['lo']:.2f}–{b['hi']:.2f}", str(b["count"])] for b in report["bbox_area_hist"]],
+                [
+                    [f"{b['lo']:.2f}-{b['hi']:.2f}", str(b["count"])]
+                    for b in report["bbox_area_hist"]
+                ],
             ),
             "",
             f"n_boxes with geometry = {report['bbox_area_n']}",
@@ -344,18 +377,24 @@ def render_md(reports: list[dict], plot_paths: list[str]) -> str:
             lines += [f"- {flag}" for flag in report["imbalance_flags"]]
         else:
             lines.append("- None beyond the usual long tail.")
-        lines += ["", f"Images with `no_*`: {report['pos_neg']['images_with_no_star']}. ",
-                  f"Images with positive PPE: {report['pos_neg']['images_with_positive_ppe']}.", ""]
+        lines += [
+            "",
+            f"Images with `no_*`: {report['pos_neg']['images_with_no_star']}. ",
+            f"Images with positive PPE: {report['pos_neg']['images_with_positive_ppe']}.",
+            "",
+        ]
 
     if not any_present:
         lines += [
             "## Inherited Construction plot (no raw images in this checkout)",
             "",
-            "The copied Ultralytics `results/labels.jpg` is from the **Construction** training set, not Combined:",
+            "The inherited `results/labels.jpg` covers the Construction training",
+            "set, not Combined:",
             "",
-            "- `Person` dominates instance count (on the order of ~9–10k boxes).",
+            "- `Person` dominates the instance count, on the order of 9-10k boxes.",
             "- `machinery` and `NO-Safety Vest` are next; `Mask` and `vehicle` are the thinnest.",
-            "- Many boxes are small (normalized width/height near 0). Spatial centers show a 4-quadrant mosaic pattern from training augs.",
+            "- Most boxes are small (normalized width and height near 0). Centers",
+            "  fall into a four-quadrant pattern left over from mosaic augmentation.",
             "",
             "Treat those as qualitative. Exact Combined / HHU counts require the downloads above.",
             "",
@@ -365,10 +404,8 @@ def render_md(reports: list[dict], plot_paths: list[str]) -> str:
         lines += ["## Plots", ""]
         for path in plot_paths:
             rel = Path(path)
-            try:
+            with contextlib.suppress(ValueError):
                 rel = rel.relative_to(REPO_ROOT)
-            except ValueError:
-                pass
             lines.append(f"- `{rel.as_posix()}`")
         lines.append("")
 
@@ -384,8 +421,6 @@ def main() -> int:
             root = REPO_ROOT / root
         print(f"Analyzing {name} at {root} ...")
         report = analyze_dataset(name, root)
-        # Drop raw area list from JSON (keep hist only).
-        json_report = {k: v for k, v in report.items() if k != "areas"}
         reports.append(report)
         print(
             f"  present={report['present']} splits={report['images_per_split']} "

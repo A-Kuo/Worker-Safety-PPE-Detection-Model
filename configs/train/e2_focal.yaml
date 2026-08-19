@@ -1,4 +1,4 @@
-# E2 — YOLOv8n + Ultralytics focal loss. Same subset/seed as E0; targets no_* FNs.
+# E2: YOLOv8n with focal loss. Same subset and seed as E0. Aimed at no_* false negatives.
 experiment: e2_focal
 model: yolov8n.pt
 data: configs/data/combined.yaml

@@ -43,36 +43,40 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--data", type=Path, default=None)
     parser.add_argument("--split", default="test")
     parser.add_argument("--imgsz", type=int, default=640)
-    parser.add_argument("--conf", type=float, default=0.001, help="Low dump threshold; sweep happens after.")
+    parser.add_argument(
+        "--conf", type=float, default=0.001, help="Low dump threshold; sweep happens after."
+    )
     parser.add_argument("--iou", type=float, default=0.5)
     parser.add_argument("--bins", type=int, default=10)
     parser.add_argument("--max-images", type=int, default=0, help="0 = all images in the split")
-    parser.add_argument("--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "calibration.json")
+    parser.add_argument(
+        "--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "calibration.json"
+    )
     return parser.parse_args()
 
 
 def ece_brier(confidences: list[float], correct: list[bool], n_bins: int) -> dict[str, Any]:
     if not confidences:
         return {"ece": None, "brier": None, "n": 0, "reliability": []}
-    brier = sum((c - (1.0 if ok else 0.0)) ** 2 for c, ok in zip(confidences, correct)) / len(confidences)
+    brier = sum(
+        (c - (1.0 if ok else 0.0)) ** 2 for c, ok in zip(confidences, correct, strict=False)
+    ) / len(confidences)
     edges = [i / n_bins for i in range(n_bins + 1)]
     ece = 0.0
     reliability = []
     n = len(confidences)
     for i in range(n_bins):
         lo, hi = edges[i], edges[i + 1]
-        idxs = [
-            j
-            for j, c in enumerate(confidences)
-            if (c >= lo if i == 0 else c > lo) and c <= hi
-        ]
+        idxs = [j for j, c in enumerate(confidences) if (c >= lo if i == 0 else c > lo) and c <= hi]
         if not idxs:
             reliability.append({"lo": lo, "hi": hi, "n": 0, "confidence": None, "accuracy": None})
             continue
         acc = sum(1 for j in idxs if correct[j]) / len(idxs)
         conf = sum(confidences[j] for j in idxs) / len(idxs)
         ece += abs(acc - conf) * (len(idxs) / n)
-        reliability.append({"lo": lo, "hi": hi, "n": len(idxs), "confidence": conf, "accuracy": acc})
+        reliability.append(
+            {"lo": lo, "hi": hi, "n": len(idxs), "confidence": conf, "accuracy": acc}
+        )
     return {"ece": ece, "brier": brier, "n": n, "reliability": reliability}
 
 
@@ -105,7 +109,9 @@ def match_by_class(
     return pred_tp, gt_hit
 
 
-def collect_predictions(weights: Path, images: list[Path], names: list[str], imgsz: int, conf: float) -> dict[Path, list[tuple[int, float, tuple[float, float, float, float]]]]:
+def collect_predictions(
+    weights: Path, images: list[Path], names: list[str], imgsz: int, conf: float
+) -> dict[Path, list[tuple[int, float, tuple[float, float, float, float]]]]:
     from ultralytics import YOLO
 
     model = YOLO(str(weights))
@@ -122,12 +128,16 @@ def collect_predictions(weights: Path, images: list[Path], names: list[str], img
             name = (model_names or {}).get(cls_id, str(cls_id))
             if name in names:
                 cls_id = names.index(name)
-            dets.append((cls_id, float(box.conf.item()), tuple(float(x) for x in box.xyxy[0].tolist())))
+            dets.append(
+                (cls_id, float(box.conf.item()), tuple(float(x) for x in box.xyxy[0].tolist()))
+            )
         out[image] = dets
     return out
 
 
-def load_gt(image: Path, img_w: int, img_h: int) -> list[tuple[int, tuple[float, float, float, float]]]:
+def load_gt(
+    image: Path, img_w: int, img_h: int
+) -> list[tuple[int, tuple[float, float, float, float]]]:
     gts = []
     for row in parse_yolo_label(label_path_for_image(image)):
         if len(row) < 5:
@@ -194,7 +204,16 @@ def sweep_no_star(
                 fn += sum(1 for ok in gt_hit if not ok)
             precision = tp / (tp + fp) if (tp + fp) else 0.0
             recall = tp / (tp + fn) if (tp + fn) else 0.0
-            rows.append({"threshold": thr, "tp": tp, "fp": fp, "fn": fn, "precision": precision, "recall": recall})
+            rows.append(
+                {
+                    "threshold": thr,
+                    "tp": tp,
+                    "fp": fp,
+                    "fn": fn,
+                    "precision": precision,
+                    "recall": recall,
+                }
+            )
 
         eligible = [r for r in rows if r["recall"] >= target_recall]
         if eligible:
@@ -240,9 +259,17 @@ def maybe_reliability_plots(global_cal: dict, per_class: dict, out_dir: Path) ->
         plt.close(fig)
         written.append(str(path))
 
-    _plot(global_cal.get("reliability") or [], "reliability (all dets)", out_dir / "reliability_global.png")
+    _plot(
+        global_cal.get("reliability") or [],
+        "reliability (all dets)",
+        out_dir / "reliability_global.png",
+    )
     for name, payload in per_class.items():
-        _plot(payload.get("reliability") or [], f"reliability {name}", out_dir / f"reliability_{name}.png")
+        _plot(
+            payload.get("reliability") or [],
+            f"reliability {name}",
+            out_dir / f"reliability_{name}.png",
+        )
     return written
 
 
@@ -289,7 +316,7 @@ def main() -> int:
         gts = load_gt(image, w, h)
         pds = preds.get(image, [])
         pred_tp, _ = match_by_class(pds, gts, args.iou)
-        for (cls_id, conf, _box), ok in zip(pds, pred_tp):
+        for (cls_id, conf, _box), ok in zip(pds, pred_tp, strict=False):
             all_conf.append(conf)
             all_ok.append(ok)
             per_cls_conf[cls_id].append(conf)

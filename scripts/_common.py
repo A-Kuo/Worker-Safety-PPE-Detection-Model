@@ -1,8 +1,7 @@
-"""Shared path, dataset, and ``ppe`` import helpers for PPE scripts.
+"""Path, dataset, and import helpers shared by the pipeline scripts.
 
-Label-schema tables live in ``ppe.schema`` (src layout). This module only
-resolves paths, reads YOLO folders, and adapts the published contract.
-``src.ppe`` remains a fallback import path.
+Label tables live in ``ppe.schema``. This module only resolves paths and reads
+YOLO folder layouts.
 """
 
 from __future__ import annotations
@@ -44,26 +43,21 @@ NO_STAR_CLASSES = ("no_helmet", "no_vest", "no_goggles", "no_gloves", "no_mask")
 
 
 def ensure_repo_on_path() -> None:
-    """Put repo root and ``src/`` on ``sys.path`` (src-layout ``ppe`` package)."""
-    for path in (REPO_ROOT, REPO_ROOT / "src"):
+    """Make the src-layout ``ppe`` package importable from a plain checkout."""
+    for path in (REPO_ROOT / "src", REPO_ROOT):
         text = str(path)
         if text not in sys.path:
             sys.path.insert(0, text)
 
 
 def _import_ppe(module: str):
-    """Import src-layout ``ppe.*`` first; fall back to ``src.ppe.*``."""
     ensure_repo_on_path()
-    errors: list[str] = []
-    for name in (f"ppe.{module}", f"src.ppe.{module}"):
-        try:
-            return importlib.import_module(name)
-        except ImportError as exc:
-            errors.append(f"{name}: {exc}")
-    raise ImportError(
-        f"ppe.{module} is not importable yet. Tried ppe.{module} and src.ppe.{module}. "
-        + " | ".join(errors)
-    )
+    try:
+        return importlib.import_module(f"ppe.{module}")
+    except ImportError as exc:
+        raise ImportError(
+            f"Could not import ppe.{module}. Run `pip install -e .` from the repo root."
+        ) from exc
 
 
 def load_schema():
@@ -228,7 +222,9 @@ def parse_yolo_label(label_path: Path) -> list[list[float]]:
     return rows
 
 
-def yolo_norm_to_xyxy(xc: float, yc: float, w: float, h: float) -> tuple[float, float, float, float]:
+def yolo_norm_to_xyxy(
+    xc: float, yc: float, w: float, h: float
+) -> tuple[float, float, float, float]:
     return xc - w / 2.0, yc - h / 2.0, xc + w / 2.0, yc + h / 2.0
 
 
@@ -293,7 +289,9 @@ def infer_mapping_kind(names: Sequence[str]) -> str:
     return "combined"
 
 
-def build_id_map(schema, source_names: Sequence[str], name_mapping: Mapping[str, str]) -> dict[int, int]:
+def build_id_map(
+    schema, source_names: Sequence[str], name_mapping: Mapping[str, str]
+) -> dict[int, int]:
     id_map: dict[int, int] = {}
     for old_id, raw in enumerate(source_names):
         unified = lookup_mapping(name_mapping, raw)
@@ -303,26 +301,17 @@ def build_id_map(schema, source_names: Sequence[str], name_mapping: Mapping[str,
     return id_map
 
 
-def apply_remap_line(schema, line: str, id_map: Mapping[int, int], source_names: Sequence[str], name_mapping: Mapping[str, str]) -> str | None:
-    """Call ``schema.remap_yolo_line(line, raw_names, mapping)``."""
+def apply_remap_line(
+    schema,
+    line: str,
+    source_names: Sequence[str],
+    name_mapping: Mapping[str, str],
+) -> str | None:
+    """Rewrite one YOLO label line, tolerating case differences in class names."""
     mapping = dict(name_mapping)
-    for key, value in list(name_mapping.items()):
+    for key, value in name_mapping.items():
         mapping.setdefault(key.casefold(), value)
-    try:
-        return schema.remap_yolo_line(line, list(source_names), mapping)
-    except TypeError:
-        pass
-    parts = line.strip().split()
-    if not parts:
-        return None
-    try:
-        old_id = int(float(parts[0]))
-    except ValueError:
-        return None
-    if old_id not in id_map:
-        return None
-    parts[0] = str(id_map[old_id])
-    return " ".join(parts)
+    return schema.remap_yolo_line(line, list(source_names), mapping)
 
 
 def write_unified_yaml(
@@ -332,28 +321,14 @@ def write_unified_yaml(
     train: str,
     val: str,
     test: str | None = None,
-    path_root: str | None = None,
     names: Sequence[str] | None = None,
 ) -> None:
-    """Call ``schema.write_dataset_yaml(path, train, val, test, names)``."""
-    ordered = list(names or getattr(schema, "UNIFIED_CLASS_NAMES"))
-    test_path = test if test is not None else ""
-    if path_root:
-        # Ultralytics resolves relative split paths against the yaml parent.
-        # Keep splits relative; path_root is recorded only if the helper accepts it.
-        _ = path_root
-    try:
-        schema.write_dataset_yaml(dest, train, val, test_path, ordered)
-        return
-    except TypeError:
-        payload = {
-            "train": train,
-            "val": val,
-            "test": test_path,
-            "nc": len(ordered),
-            "names": ordered,
-        }
-        dump_yaml(dest, payload)
+    """Write an Ultralytics dataset yaml on the unified class list.
+
+    Split paths stay relative; Ultralytics resolves them against the yaml.
+    """
+    ordered = list(names or schema.UNIFIED_CLASS_NAMES)
+    schema.write_dataset_yaml(dest, train, val, test or "", ordered)
 
 
 def link_or_copy(src: Path, dst: Path) -> str:

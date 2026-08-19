@@ -1,8 +1,8 @@
 # Experiments
 
-Fixed data, split, and seed. Change **one** factor at a time on the stratified Combined 12k subset, then confirm once on the full 44k set.
+Fixed data, split, and seed. One factor changes per run on the stratified Combined 12k subset, then a single confirmation run on the full 44k set.
 
-Do **not** compare Combined 14-class mAP to the inherited Construction 10-class baseline (mAP50 = 0.809). Compare only on `SHARED_EVAL_CLASSES` (helmet / vest / mask / person / cone and their `no_*` partners).
+Combined 14-class mAP is not comparable to the inherited Construction 10-class baseline (mAP50 = 0.809). Comparisons run on `SHARED_EVAL_CLASSES` only: helmet, vest, mask, person, cone, and their `no_*` partners.
 
 Safety-critical classes for false-negative analysis: `no_helmet`, `no_vest`, `no_goggles`, `no_mask`.
 
@@ -10,9 +10,9 @@ Safety-critical classes for false-negative analysis: `no_helmet`, `no_vest`, `no
 
 | Stage | Data | Model | Epochs | Purpose |
 |---|---|---|---|---|
-| E0–E3 grid | Combined 12k subset (`data/raw/combined_12k`) | see table | 100 or early stop | isolate size / loss / augs |
+| E0-E3 grid | Combined 12k subset (`data/raw/combined_12k`) | see table | 100 or early stop | isolate size, loss, augmentation |
 | E4 confirm | Combined full 44k | YOLOv8n | 50 + early stop | shipped detector |
-| E5 (optional) | only if E1 and E4 finished | YOLOv8m | — | not scheduled |
+| E5 (optional) | only if E1 and E4 finished | YOLOv8m | n/a | not scheduled |
 
 Seed, `imgsz=640`, cosine LR, pretrained Ultralytics weights. Configs live in `configs/train/{e0_n,e1_s,e2_focal,e3_augs,e4_full44k}.yaml`.
 
@@ -47,7 +47,7 @@ Construction baseline (Snehil Sanyal, 10-class, val n=114): global mAP50 = 0.809
 
 ## Cross-domain (same E4 weights)
 
-HHU `head` → `no_helmet` is an **assumption** (implicit missing helmet). Score it separately so it does not pollute Combined metrics.
+Reading HHU `head` as `no_helmet` is an assumption, so it is scored separately and kept out of Combined metrics.
 
 | Domain | Split | mAP50 | mAP50-95 | P | R | classes |
 |---|---|---|---|---|---|---|
@@ -55,30 +55,30 @@ HHU `head` → `no_helmet` is an **assumption** (implicit missing helmet). Score
 | Construction (mapped shared) | test | pending training run | pending training run | pending training run | pending training run | `SHARED_EVAL_CLASSES` |
 | HHU remapped | test | pending training run | pending training run | pending training run | pending training run | helmet / vest / person / no_helmet |
 
-Trade-off to write after numbers exist: one general Combined model vs a helmet-specialist. Do not train the specialist unless E4 finished early.
+Once the numbers exist, the open question is one general Combined model against a helmet specialist. The specialist is out of scope unless E4 finishes early.
 
 ## Calibration and `no_*` thresholds
 
-Target: recall ≥ 0.90 on violation classes, then report the precision cost. See `scripts/calibrate.py` → `results/analysis/calibration.json`.
+Target recall on violation classes is 0.90, reported alongside the precision it costs. `scripts/calibrate.py` writes `results/analysis/calibration.json`.
 
-| Class | ECE | Brier | thr @ R≥0.90 | precision at that thr | precision cost (1−P) | best R if 0.90 missed |
+| Class | ECE | Brier | thr at R >= 0.90 | precision at that thr | precision cost (1-P) | best R if 0.90 missed |
 |---|---|---|---|---|---|---|
-| all detections | pending training run | pending training run | — | — | — | — |
+| all detections | pending training run | pending training run | n/a | n/a | n/a | n/a |
 | no_helmet | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run |
 | no_vest | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run |
 | no_goggles | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run |
 | no_mask | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run |
 
-## Latency (640×640 and 960×540)
+## Latency (640x640 and 960x540)
 
 Fill from `scripts/benchmark.py` after `scripts/export_onnx.py`.
 
 | Backend | size | latency ms | FPS | RSS MB | VRAM MB |
 |---|---|---|---|---|---|
-| PyTorch | 640×640 | pending training run | pending training run | pending training run | pending training run |
-| ORT | 640×640 | pending training run | pending training run | pending training run | pending training run |
-| PyTorch | 960×540 | pending training run | pending training run | pending training run | pending training run |
-| ORT | 960×540 | pending training run | pending training run | pending training run | pending training run |
+| PyTorch | 640x640 | pending training run | pending training run | pending training run | pending training run |
+| ORT | 640x640 | pending training run | pending training run | pending training run | pending training run |
+| PyTorch | 960x540 | pending training run | pending training run | pending training run | pending training run |
+| ORT | 960x540 | pending training run | pending training run | pending training run | pending training run |
 
 ## External reference (not this work)
 

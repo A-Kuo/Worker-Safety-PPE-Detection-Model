@@ -1,4 +1,4 @@
-# Raw / downloaded datasets — do not commit 44k images
+# Downloaded datasets. 44k images do not belong in git.
 data/raw/
 data/combined/
 data/hardhat/
@@ -34,3 +34,6 @@ env/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local run outputs (annotated clips, API scratch files)
+output/

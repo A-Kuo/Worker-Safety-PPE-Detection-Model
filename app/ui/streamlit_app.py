@@ -1,4 +1,4 @@
-"""Streamlit demo: upload a frame or clip, review boxes and compliance strings."""
+"""Streamlit review UI: upload a frame or clip and read the compliance calls."""
 
 from __future__ import annotations
 
@@ -9,239 +9,213 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-import streamlit as st
+import streamlit as st  # noqa: E402
 
-from app.media import (
+from app.media import (  # noqa: E402
     DEFAULT_MAX_VIDEO_FRAMES,
     DEFAULT_MAX_VIDEO_SECONDS,
     bgr_to_rgb,
     decode_image_bytes,
     iter_capped_frames,
-    open_capture,
-    video_meta,
 )
-from app.paths import ensure_src_on_path, resolve_weights_path
-from app.runtime import IMPORT_ERROR, build_detector
+from app.paths import ensure_src_on_path, resolve_weights_path  # noqa: E402
+from app.runtime import PIPELINE_LOCK, get_pipeline  # noqa: E402
 
 ensure_src_on_path()
-try:
-    from ppe.compliance import Detection, WorkerCompliance, associate_ppe_to_persons
-    from ppe.inference import PPEDetector
-except ImportError:
-    from app.runtime import Detection, PPEDetector, WorkerCompliance, associate_ppe_to_persons
 
-st.set_page_config(page_title="PPE Compliance Demo", layout="wide")
+from ppe.draw import annotate  # noqa: E402
+from ppe.sources import SourceUnavailable, open_capture  # noqa: E402
+
+st.set_page_config(page_title="PPE compliance", layout="wide")
 
 
-@st.cache_resource
-def _cached_detector(weights: str, device: str) -> PPEDetector:
-    return build_detector(weights, conf=0.25, device=device or None)
+def load_pipeline(weights: str, conf: float):
+    return get_pipeline(weights or None, conf=conf)
 
 
-def _load_detector(weights: str, conf: float, device: str) -> PPEDetector:
-    detector = _cached_detector(weights, device)
-    detector.conf = float(conf)
-    return detector
-
-
-def _show_workers(workers: list[WorkerCompliance]) -> None:
+def show_workers(workers) -> None:
     if not workers:
-        st.info("No person boxes in this frame.")
+        st.info("No people detected in this frame.")
         return
-    ok = sum(1 for w in workers if not w.missing and not w.violations)
-    bad = len(workers) - ok
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Workers", len(workers))
-    c2.metric("Compliant", ok)
-    c3.metric("Violations", bad)
+    compliant = sum(1 for worker in workers if worker.compliant)
+    left, middle, right = st.columns(3)
+    left.metric("Workers", len(workers))
+    middle.metric("Compliant", compliant)
+    right.metric("Violations", len(workers) - compliant)
+
     for worker in workers:
-        text = worker.label
-        extras = []
+        details = []
         if worker.present:
-            extras.append("present: " + ", ".join(worker.present))
+            details.append("wearing: " + ", ".join(worker.present))
         if worker.missing:
-            extras.append("missing: " + ", ".join(worker.missing))
+            details.append("missing: " + ", ".join(worker.missing))
         if worker.violations:
-            extras.append("flags: " + ", ".join(worker.violations))
-        body = text if not extras else f"{text}  \n" + " · ".join(extras)
-        if worker.missing or worker.violations:
-            st.error(body)
-        else:
-            st.success(body)
+            details.append("flags: " + ", ".join(worker.violations))
+        body = worker.label if not details else f"{worker.label}  \n" + " | ".join(details)
+        (st.success if worker.compliant else st.error)(body)
 
 
-def _run_frame(detector: PPEDetector, image_bgr):
-    annotated, workers = detector.predict_and_comply(image_bgr)
-    return annotated, workers
+def image_tab(pipeline) -> None:
+    upload = st.file_uploader(
+        "Upload a still (JPEG, PNG, WebP)",
+        type=["jpg", "jpeg", "png", "webp"],
+        key="image_upload",
+    )
+    if upload is None:
+        return
+    if pipeline is None:
+        st.info("Set a valid weights path in the sidebar.")
+        return
+    try:
+        image = decode_image_bytes(upload.getvalue())
+    except ValueError as exc:
+        st.error(str(exc))
+        return
+
+    with PIPELINE_LOCK:
+        pipeline.reset()
+        result = pipeline.process(image)
+        annotated = annotate(image, result.detections, result.workers)
+
+    left, right = st.columns((3, 2))
+    with left:
+        st.image(bgr_to_rgb(annotated), caption="Annotated", use_container_width=True)
+    with right:
+        st.subheader("Compliance")
+        st.caption(f"{result.latency_ms:.1f} ms")
+        show_workers(result.workers)
+
+
+def video_tab(pipeline, max_frames: int) -> None:
+    clip = st.file_uploader(
+        "Upload a video",
+        type=["mp4", "avi", "mov", "mkv", "webm"],
+        key="video_upload",
+    )
+    if clip is None:
+        return
+    if pipeline is None:
+        st.info("Set a valid weights path in the sidebar.")
+        return
+
+    scratch = _REPO_ROOT / "output" / "app" / f"ui_upload{Path(clip.name).suffix or '.mp4'}"
+    scratch.parent.mkdir(parents=True, exist_ok=True)
+    scratch.write_bytes(clip.getvalue())
+
+    try:
+        cap = open_capture(str(scratch))
+    except SourceUnavailable as exc:
+        st.error(str(exc))
+        return
+
+    progress = st.progress(0, text="Running detection")
+    last_frame = None
+    last_workers: list = []
+    alerts: list[str] = []
+    processed = 0
+    workers_max = 0
+    violation_frames = 0
+
+    try:
+        with PIPELINE_LOCK:
+            pipeline.reset()
+            for index, frame, timestamp in iter_capped_frames(
+                cap, max_frames=max_frames, max_seconds=DEFAULT_MAX_VIDEO_SECONDS
+            ):
+                result = pipeline.process(frame, timestamp)
+                last_frame = annotate(frame, result.detections, result.workers)
+                last_workers = result.workers
+                processed += 1
+                workers_max = max(workers_max, len(result.workers))
+                if any(worker.violations for worker in result.workers):
+                    violation_frames += 1
+                alerts.extend(event.describe() for event in result.events)
+                progress.progress(
+                    min(processed / max(max_frames, 1), 1.0),
+                    text=f"Frame {index}, {processed} inferred",
+                )
+            latency = pipeline.latency.as_dict()
+    finally:
+        cap.release()
+        progress.empty()
+
+    one, two, three = st.columns(3)
+    one.metric("Frames inferred", processed)
+    two.metric("Workers (max)", workers_max)
+    three.metric("Frames with violations", violation_frames)
+    st.caption(f"Median {latency.get('p50_ms', 0)} ms per frame, {latency.get('fps', 0)} fps")
+
+    if last_frame is not None:
+        st.image(bgr_to_rgb(last_frame), caption="Last annotated frame", use_container_width=True)
+    if alerts:
+        st.subheader("Alerts raised")
+        for line in alerts[:40]:
+            st.write(line)
+    show_workers(last_workers)
+
+
+def webcam_tab(pipeline) -> None:
+    st.write(
+        "Single snapshot from the browser camera. For a continuous preview, run the API "
+        "and open /stream."
+    )
+    try:
+        snap = st.camera_input("Capture a frame")
+    except Exception:
+        st.warning("The camera widget is unavailable in this Streamlit build or browser.")
+        return
+    if snap is None:
+        return
+    if pipeline is None:
+        st.info("Set a valid weights path in the sidebar.")
+        return
+    try:
+        image = decode_image_bytes(snap.getvalue())
+    except ValueError as exc:
+        st.error(str(exc))
+        return
+    with PIPELINE_LOCK:
+        pipeline.reset()
+        result = pipeline.process(image)
+        annotated = annotate(image, result.detections, result.workers)
+    st.image(bgr_to_rgb(annotated), caption="Annotated", use_container_width=True)
+    show_workers(result.workers)
 
 
 def main() -> None:
     st.title("Worker PPE compliance")
-    st.caption(
-        "YOLOv8 detections associated to each person. "
-        "Labels look like “Worker 12 — missing helmet and vest”."
-    )
+    st.caption('Detections attached to each person, reported as "Worker 12: missing helmet".')
 
-    if IMPORT_ERROR:
-        st.error(
-            "The `ppe` package is not importable yet. "
-            f"Prefer `pip install -e .` or put `src/` on PYTHONPATH. ({IMPORT_ERROR})"
-        )
-        st.stop()
-
-    default_weights = str(resolve_weights_path())
     with st.sidebar:
         st.header("Model")
-        weights = st.text_input("Weights path", value=default_weights)
+        weights = st.text_input("Weights path", value=str(resolve_weights_path()))
         conf = st.slider("Confidence threshold", 0.05, 0.90, 0.25, 0.05)
-        device = st.text_input(
-            "Device (blank = auto / PPE_DEVICE)",
-            value="",
-            help="Examples: cpu, cuda, 0",
-        )
         max_frames = st.slider(
             "Max video frames",
             30,
             600,
             DEFAULT_MAX_VIDEO_FRAMES,
             30,
-            help="Long clips are sampled across the duration, not truncated from the start only.",
+            help="Long clips are sampled across their duration, not cut off at the start.",
         )
         st.caption(
-            "Live MJPEG (webcam / RTSP) is served by the API at "
-            "`GET /stream`. Open http://127.0.0.1:8000/stream after starting uvicorn. "
-            "A missing camera returns HTTP 503."
+            "Live MJPEG comes from the API at GET /stream. Start uvicorn and open "
+            "http://127.0.0.1:8000/stream. Hosts without a camera get a 503."
         )
 
-    detector = None
-    load_error = None
+    pipeline = None
     try:
-        detector = _load_detector(weights.strip(), float(conf), device.strip())
-    except FileNotFoundError as exc:
-        load_error = str(exc)
+        pipeline = load_pipeline(weights.strip(), float(conf))
     except Exception as exc:
-        load_error = f"Could not load detector: {exc}"
-    if load_error:
-        st.warning(load_error)
+        st.warning(f"Could not load the detector: {exc}")
 
-    image_tab, video_tab, cam_tab = st.tabs(["Image", "Video", "Webcam"])
-
-    with image_tab:
-        upload = st.file_uploader(
-            "Upload a still (JPEG, PNG, WebP)",
-            type=["jpg", "jpeg", "png", "webp"],
-            key="image_upload",
-        )
-        if upload is not None and detector is None:
-            st.info("Set a valid weights path in the sidebar.")
-        elif upload is not None:
-            try:
-                image = decode_image_bytes(upload.getvalue())
-            except ValueError as exc:
-                st.error(str(exc))
-            else:
-                annotated, workers = _run_frame(detector, image)
-                left, right = st.columns((3, 2))
-                with left:
-                    st.image(bgr_to_rgb(annotated), caption="Annotated", use_container_width=True)
-                with right:
-                    st.subheader("Compliance")
-                    _show_workers(workers)
-
-    with video_tab:
-        clip = st.file_uploader(
-            "Upload a video",
-            type=["mp4", "avi", "mov", "mkv", "webm"],
-            key="video_upload",
-        )
-        if clip is not None and detector is None:
-            st.info("Set a valid weights path in the sidebar.")
-        elif clip is not None:
-            suffix = Path(clip.name).suffix or ".mp4"
-            tmp_path = _REPO_ROOT / "output" / "app" / f"ui_upload{suffix}"
-            tmp_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path.write_bytes(clip.getvalue())
-
-            cap = open_capture(str(tmp_path))
-            if not cap.isOpened():
-                st.error("Could not open the uploaded video.")
-            else:
-                meta = video_meta(cap)
-                progress = st.progress(0, text="Running detection…")
-                last_annotated = None
-                last_workers = []
-                violation_frames = 0
-                processed = 0
-                workers_max = 0
-                labels: list[str] = []
-                seen: set[str] = set()
-                try:
-                    for index, frame in iter_capped_frames(
-                        cap,
-                        max_frames=int(max_frames),
-                        max_seconds=DEFAULT_MAX_VIDEO_SECONDS,
-                    ):
-                        annotated, workers = detector.predict_and_comply(frame)
-                        last_annotated = annotated
-                        last_workers = workers
-                        processed += 1
-                        workers_max = max(workers_max, len(workers))
-                        if any(w.missing or w.violations for w in workers):
-                            violation_frames += 1
-                        for worker in workers:
-                            if worker.label not in seen and len(labels) < 40:
-                                seen.add(worker.label)
-                                labels.append(worker.label)
-                        progress.progress(
-                            min(processed / max(int(max_frames), 1), 1.0),
-                            text=f"Frame {index} · {processed} inferred",
-                        )
-                finally:
-                    cap.release()
-                    progress.empty()
-
-                st.caption(
-                    f"Source ~{meta['fps']:.1f} FPS, {int(meta['frame_count'])} frames. "
-                    f"Inferred {processed} frames (capped at {max_frames} / "
-                    f"{DEFAULT_MAX_VIDEO_SECONDS:.0f}s)."
-                )
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Frames inferred", processed)
-                m2.metric("Workers (max)", workers_max)
-                m3.metric("Frames with violations", violation_frames)
-                if last_annotated is not None:
-                    st.image(
-                        bgr_to_rgb(last_annotated),
-                        caption="Last annotated frame",
-                        use_container_width=True,
-                    )
-                if labels:
-                    st.subheader("Sample compliance strings")
-                    for line in labels:
-                        st.write(line)
-                _show_workers(last_workers)
-
-    with cam_tab:
-        st.write(
-            "Snapshot from the browser camera. For a continuous MJPEG preview, "
-            "run the API and open `/stream` (503 if no camera is attached)."
-        )
-        snap = None
-        try:
-            snap = st.camera_input("Capture a frame")
-        except Exception:
-            st.warning("Webcam widget is unavailable in this Streamlit build or browser.")
-        if snap is not None and detector is None:
-            st.info("Set a valid weights path in the sidebar.")
-        elif snap is not None:
-            try:
-                image = decode_image_bytes(snap.getvalue())
-            except ValueError as exc:
-                st.error(str(exc))
-            else:
-                annotated, workers = _run_frame(detector, image)
-                st.image(bgr_to_rgb(annotated), caption="Annotated", use_container_width=True)
-                _show_workers(workers)
+    tabs = st.tabs(["Image", "Video", "Webcam"])
+    with tabs[0]:
+        image_tab(pipeline)
+    with tabs[1]:
+        video_tab(pipeline, int(max_frames))
+    with tabs[2]:
+        webcam_tab(pipeline)
 
 
 main()

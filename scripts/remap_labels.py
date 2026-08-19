@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rewrite YOLO label class ids onto the unified Combined schema.
 
-Walks a YOLO dataset, remaps each label line via ``src.ppe.schema``, and
+Walks a YOLO dataset, remaps each label line via ``ppe.schema``, and
 writes a unified ``data.yaml``. Construction is **never** merged into Combined.
 """
 
@@ -21,15 +21,13 @@ from _common import (  # noqa: E402
     apply_remap_line,
     build_id_map,
     discover_split_dirs,
-    dump_yaml,
     infer_mapping_kind,
     iter_split_images,
-    lookup_mapping,
     label_path_for_image,
     link_or_copy,
     load_schema,
+    lookup_mapping,
     mapping_for_source,
-    parse_names,
     read_dataset_names,
     write_unified_yaml,
 )
@@ -37,7 +35,9 @@ from _common import (  # noqa: E402
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, required=True, help="YOLO dataset root (contains data.yaml + splits)")
+    parser.add_argument(
+        "--source", type=Path, required=True, help="YOLO dataset root (contains data.yaml + splits)"
+    )
     parser.add_argument(
         "--out",
         type=Path,
@@ -54,7 +54,9 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Rejected on purpose. Construction must not be merged into Combined.",
     )
-    parser.add_argument("--copy-images", action="store_true", help="Copy images instead of symlink/hardlink.")
+    parser.add_argument(
+        "--copy-images", action="store_true", help="Copy images instead of symlink/hardlink."
+    )
     return parser.parse_args()
 
 
@@ -77,7 +79,8 @@ def _refuse_merge(mapping: str, source: Path, dest: Path) -> None:
     if src_is_construction and dest_is_combined:
         raise SystemExit(
             "Refusing to write Construction labels into a Combined destination. "
-            "Do not merge Construction into Combined (hash-dedup would be required, and it is out of scope)."
+            "Construction is not merged into Combined. Doing that safely needs "
+            "perceptual-hash deduplication, which is out of scope here."
         )
 
 
@@ -114,7 +117,13 @@ def main() -> int:
         raise SystemExit(f"No train/valid/test image folders under {dataset_root}")
 
     dest.mkdir(parents=True, exist_ok=True)
-    stats = {"mapping": kind, "source": str(source), "dropped_classes": dropped, "splits": {}, "id_map": {str(k): v for k, v in id_map.items()}}
+    stats = {
+        "mapping": kind,
+        "source": str(source),
+        "dropped_classes": dropped,
+        "splits": {},
+        "id_map": {str(k): v for k, v in id_map.items()},
+    }
 
     for split, images_dir in splits.items():
         n_img = n_lab = n_drop = 0
@@ -139,43 +148,33 @@ def main() -> int:
                 for raw in src_lab.read_text(encoding="utf-8").splitlines():
                     if not raw.strip():
                         continue
-                    remapped = apply_remap_line(schema, raw, id_map, names, name_mapping)
+                    remapped = apply_remap_line(schema, raw, names, name_mapping)
                     if remapped is None or not str(remapped).strip():
                         n_drop += 1
                         continue
                     out_lines.append(str(remapped).strip())
-            dest_lab.write_text(("\n".join(out_lines) + ("\n" if out_lines else "")), encoding="utf-8")
+            dest_lab.write_text(
+                ("\n".join(out_lines) + ("\n" if out_lines else "")), encoding="utf-8"
+            )
             n_lab += 1
         stats["splits"][split] = {"images": n_img, "label_files": n_lab, "dropped_boxes": n_drop}
         print(f"{split}: {n_img} images, dropped {n_drop} unmapped boxes")
 
     train_rel = "train/images" if "train" in splits else next(iter(splits.values())).as_posix()
-    val_key = "valid" if "valid" in splits else ("train" if "train" in splits else next(iter(splits)))
+    val_key = (
+        "valid" if "valid" in splits else ("train" if "train" in splits else next(iter(splits)))
+    )
     val_rel = f"{val_key}/images"
     test_rel = "test/images" if "test" in splits else None
     out_yaml = dest / "data.yaml"
-    try:
-        write_unified_yaml(
-            schema,
-            out_yaml,
-            train=train_rel,
-            val=val_rel,
-            test=test_rel,
-            path_root=str(dest.resolve()),
-            names=list(schema.UNIFIED_CLASS_NAMES),
-        )
-    except Exception as exc:  # noqa: BLE001
-        print(f"write_dataset_yaml failed ({exc}); writing a local yaml fallback.", file=sys.stderr)
-        payload = {
-            "path": str(dest.resolve()),
-            "train": train_rel,
-            "val": val_rel,
-            "nc": len(schema.UNIFIED_CLASS_NAMES),
-            "names": list(schema.UNIFIED_CLASS_NAMES),
-        }
-        if test_rel:
-            payload["test"] = test_rel
-        dump_yaml(out_yaml, payload)
+    write_unified_yaml(
+        schema,
+        out_yaml,
+        train=train_rel,
+        val=val_rel,
+        test=test_rel,
+        names=list(schema.UNIFIED_CLASS_NAMES),
+    )
 
     (dest / "remap_stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
     print(f"Wrote remapped dataset to {dest}")

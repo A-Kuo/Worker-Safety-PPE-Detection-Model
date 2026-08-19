@@ -37,9 +37,7 @@ class DatasetSpec:
     @property
     def universe_url(self) -> str:
         ver = self.version if self.version is not None else "latest"
-        return (
-            f"https://universe.roboflow.com/{self.workspace}/{self.project}/dataset/{ver}"
-        )
+        return f"https://universe.roboflow.com/{self.workspace}/{self.project}/dataset/{ver}"
 
     @property
     def shorthand(self) -> str:
@@ -71,7 +69,10 @@ def default_specs() -> list[DatasetSpec]:
             version=4,
             dest=raw / "combined",
             optional=False,
-            notes="Unified train set: 44,002 images, 14 classes, 70/20/10. Do not merge Construction into this folder.",
+            notes=(
+                "Unified train set: 44,002 images, 14 classes, 70/20/10. "
+                "Construction does not go in this folder."
+            ),
         ),
         DatasetSpec(
             key="hardhat",
@@ -116,7 +117,9 @@ def _parse_args() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument("--skip-construction", action="store_true")
-    parser.add_argument("--hhu-version", type=int, default=None, help="Override Hard Hat Universe version.")
+    parser.add_argument(
+        "--hhu-version", type=int, default=None, help="Override Hard Hat Universe version."
+    )
     return parser.parse_args()
 
 
@@ -182,7 +185,10 @@ def _download(spec: DatasetSpec, api_key: str, hhu_version: int | None) -> Path:
     version = spec.version
     if spec.key == "hardhat":
         version = _resolve_hhu_version(project, hhu_version or spec.version)
-        print(f"Hard Hat Universe: using version {version} (prefer {PREFERRED_HHU_VERSION} {PREFERRED_HHU_NAME})")
+        print(
+            f"Hard Hat Universe: using version {version} "
+            f"(prefer {PREFERRED_HHU_VERSION} {PREFERRED_HHU_NAME})"
+        )
     if version is None:
         raise SystemExit(f"Could not resolve a version for {spec.key}")
     print(f"Downloading {spec.shorthand} -> {spec.dest}")

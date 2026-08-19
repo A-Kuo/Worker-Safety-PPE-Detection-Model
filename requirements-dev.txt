@@ -1,0 +1,4 @@
+# What CI installs. Torch and ultralytics are deliberately absent: the suite
+# runs the ONNX Runtime path and a scripted backend instead.
+#   python -m pip install -r requirements-dev.txt
+-e .[edge,app,dev]

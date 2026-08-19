@@ -1,4 +1,4 @@
-# E1 — YOLOv8s. Same subset/seed/hparams as E0; measures accuracy vs FPS.
+# E1: YOLOv8s. Same subset, seed, and hyperparameters as E0. Measures accuracy against FPS.
 experiment: e1_s
 model: yolov8s.pt
 data: configs/data/combined.yaml

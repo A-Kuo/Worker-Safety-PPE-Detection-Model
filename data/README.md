@@ -1,5 +1,6 @@
 # Data
 
-Raw Roboflow exports belong in `data/raw/{construction,combined,hardhat}/` (gitignored).
-Inherited Construction YAML and notes live in `baselines/snehilsanyal_yolov8n_css/data/`.
-Dataset pointers used by training/eval are in `configs/data/`.
+Raw Roboflow exports go in `data/raw/{construction,combined,hardhat}/`, which is
+gitignored. The inherited Construction yaml and notes are under
+`baselines/snehilsanyal_yolov8n_css/data/`. The dataset pointers that training
+and eval actually read live in `configs/data/`.

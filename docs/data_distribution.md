@@ -1,7 +1,8 @@
 # Data distribution
 
-Run this analysis **before** any new Combined training. It is the portfolio differentiator:
-class imbalance, split sizes, bbox scale, and domain shift (Combined vs HHU vs tiny Construction val).
+Run before any new Combined training. It covers class imbalance, split
+sizes, box scale, and the domain gap between Combined, HHU, and the small
+Construction val split.
 
 ## How to regenerate
 
@@ -11,12 +12,16 @@ python scripts/download_datasets.py --dry-run
 python scripts/download_datasets.py --execute
 
 # 2) Remap onto the unified schema (never merge Construction into Combined)
-python scripts/remap_labels.py --source data/raw/combined --out data/processed/combined --mapping combined
-python scripts/remap_labels.py --source data/raw/hardhat --out data/processed/hardhat --mapping hhu
-python scripts/remap_labels.py --source data/raw/construction --out data/processed/construction --mapping construction
+python scripts/remap_labels.py --source data/raw/combined \
+    --out data/processed/combined --mapping combined
+python scripts/remap_labels.py --source data/raw/hardhat \
+    --out data/processed/hardhat --mapping hhu
+python scripts/remap_labels.py --source data/raw/construction \
+    --out data/processed/construction --mapping construction
 
 # 3) Optional 12k grid subset
-python scripts/make_subset.py --source data/raw/combined --out data/raw/combined_12k --n 12000 --seed 42
+python scripts/make_subset.py --source data/raw/combined \
+    --out data/raw/combined_12k --n 12000 --seed 42
 
 # 4) Counts, histograms, this document
 python scripts/analyze_distribution.py
@@ -25,47 +30,53 @@ python scripts/analyze_distribution.py
 Outputs: `results/analysis/distribution.json`, `results/analysis/class_counts_*.png`,
 `results/analysis/bbox_area_hist_*.png`, and this file.
 
-## Domain notes (locked)
+## Domain notes
 
-- **Combined** — industrial / construction mid-shot; 14 unified classes; the only train set.
-- **Hard Hat Universe** — workplace helmet/head close-to-mid shots; held-out eval. `head`→`no_helmet` is an assumption.
-- **Construction v28** — tiny overlapping slice (val **n=114**). Eval-only. `machinery`/`vehicle` stay here.
-- **Do not merge** Construction into Combined. Construction already cloned images from Combined.
+- Combined: industrial and construction mid-shot, 14 unified classes,
+  the only training set.
+- Hard Hat Universe: workplace helmet and head shots, held out for eval.
+  Reading `head` as `no_helmet` is an assumption.
+- Construction v28: small overlapping slice (val n=114), eval only.
+  `machinery` and `vehicle` stay here.
+- Construction is not merged into Combined; it already clones images from it.
 
 ## Expected thin Combined classes
 
-Expect `fall_detected`, `no_goggles`, and `gloves` / `no_gloves` to be thin. Flag them before claiming per-class SOTA.
+`fall_detected`, `no_goggles`, `gloves`, and `no_gloves` are all thin,
+so their per-class numbers carry little weight.
 
 ## combined
 
-Data not present at `C:\GitHub\Worker Safety PPE Detection Model\data\raw\combined`. Counts are pending a dataset download.
+Data not present at `/home/user/Worker-Safety-PPE-Detection-Model/data/raw/combined`. Counts are pending a dataset download.
 
-Domain: Combined is mostly construction / industrial mid-shot imagery with a 14-class PPE vocabulary (helmet/vest/goggles/gloves/mask plus `no_*`, person, cone, ladder, fall_detected).
+Domain: Combined is mostly construction and industrial mid-shot imagery, on a 14-class vocabulary: helmet, vest, goggles, gloves, mask and their `no_*` counterparts, plus person, cone, ladder, fall_detected.
 
 ## hardhat
 
-Data not present at `C:\GitHub\Worker Safety PPE Detection Model\data\raw\hardhat`. Counts are pending a dataset download.
+Data not present at `/home/user/Worker-Safety-PPE-Detection-Model/data/raw/hardhat`. Counts are pending a dataset download.
 
-Domain: Hard Hat Universe is a workplace helmet/head domain (~7k). `head` → `no_helmet` is an eval assumption (implicit missing helmet) and must be scored separately so it does not pollute Combined metrics.
+Domain: Hard Hat Universe is a workplace helmet and head domain of roughly 7k images. Reading `head` as `no_helmet` is an assumption, so it is scored separately and kept out of Combined metrics.
 
 ## construction
 
-Data not present at `C:\GitHub\Worker Safety PPE Detection Model\data\raw\construction`. Counts are pending a dataset download.
+Data not present at `/home/user/Worker-Safety-PPE-Detection-Model/data/raw/construction`. Counts are pending a dataset download.
 
-Domain: Construction v28 is a tiny overlapping slice (val n=114, test n=82) cloned in part from Combined. Do not merge it back into Combined without perceptual hashing. `machinery` / `vehicle` are Construction-only.
+Domain: Construction v28 is a small overlapping slice (val n=114, test n=82), partly cloned from Combined. Merging it back needs perceptual hashing first. `machinery` and `vehicle` are Construction-only.
 
 ## combined_12k
 
-Data not present at `C:\GitHub\Worker Safety PPE Detection Model\data\raw\combined_12k`. Counts are pending a dataset download.
+Data not present at `/home/user/Worker-Safety-PPE-Detection-Model/data/raw/combined_12k`. Counts are pending a dataset download.
 
-Domain: Stratified 12k subset of Combined used for the E0–E3 experiment grid.
+Domain: Stratified 12k subset of Combined used for the E0-E3 experiment grid.
 
 ## Inherited Construction plot (no raw images in this checkout)
 
-The copied Ultralytics `results/labels.jpg` is from the **Construction** training set, not Combined:
+The inherited `results/labels.jpg` covers the Construction training
+set, not Combined:
 
-- `Person` dominates instance count (on the order of ~9–10k boxes).
+- `Person` dominates the instance count, on the order of 9-10k boxes.
 - `machinery` and `NO-Safety Vest` are next; `Mask` and `vehicle` are the thinnest.
-- Many boxes are small (normalized width/height near 0). Spatial centers show a 4-quadrant mosaic pattern from training augs.
+- Most boxes are small (normalized width and height near 0). Centers
+  fall into a four-quadrant pattern left over from mosaic augmentation.
 
 Treat those as qualitative. Exact Combined / HHU counts require the downloads above.

@@ -27,7 +27,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--iters", type=int, default=50)
     parser.add_argument("--device", default=None, help="cuda / cpu / 0")
-    parser.add_argument("--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "benchmark.json")
+    parser.add_argument(
+        "--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "benchmark.json"
+    )
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -169,11 +171,27 @@ def main() -> int:
 
         if onnx_model is not None:
             ort_u = _time_ultralytics(onnx_model, image, args.warmup, args.iters, imgsz)
-            rows.append({"backend": "ultralytics_ort", "size": size_name, **ort_u, "rss_mb": _rss_mb(), "vram_mb": _vram_mb()})
+            rows.append(
+                {
+                    "backend": "ultralytics_ort",
+                    "size": size_name,
+                    **ort_u,
+                    "rss_mb": _rss_mb(),
+                    "vram_mb": _vram_mb(),
+                }
+            )
 
         if ort_session is not None:
             raw = _time_ort(ort_session, image, args.warmup, args.iters)
-            rows.append({"backend": "raw_ort", "size": size_name, **raw, "rss_mb": _rss_mb(), "vram_mb": _vram_mb()})
+            rows.append(
+                {
+                    "backend": "raw_ort",
+                    "size": size_name,
+                    **raw,
+                    "rss_mb": _rss_mb(),
+                    "vram_mb": _vram_mb(),
+                }
+            )
 
     payload = {**plan, "results": rows}
     args.out.parent.mkdir(parents=True, exist_ok=True)

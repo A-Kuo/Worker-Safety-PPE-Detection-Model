@@ -1,6 +1,10 @@
-ultralytics>=8.1.0
-numpy
-opencv-python
+# Core library. Enough to import ppe, run the CLI against an ONNX model,
+# and run the test suite.
+numpy>=1.24
 pyyaml
+opencv-python-headless
+onnxruntime>=1.16
+
+# Training and .pt checkpoints. Drop these two on a device that only runs ONNX.
+ultralytics>=8.1.0
 torch
-pytest

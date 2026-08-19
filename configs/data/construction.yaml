@@ -1,4 +1,4 @@
-# Construction Site Safety v28 — original 10-class names for inherited baseline eval.
+# Construction Site Safety v28: original 10-class names, for baseline eval only.
 # Download scripts should populate data/raw/construction/ from Roboflow.
 path: data/raw/construction
 train: train/images

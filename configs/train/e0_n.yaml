@@ -1,4 +1,4 @@
-# E0 — YOLOv8n default. Unified baseline on the stratified 12k Combined subset.
+# E0: YOLOv8n defaults. The reference run, on the stratified 12k Combined subset.
 experiment: e0_n
 model: yolov8n.pt
 data: configs/data/combined.yaml

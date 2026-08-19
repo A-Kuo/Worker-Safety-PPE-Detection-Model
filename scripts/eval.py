@@ -41,7 +41,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--iou", type=float, default=0.5)
-    parser.add_argument("--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "eval_combined.json")
+    parser.add_argument(
+        "--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "eval_combined.json"
+    )
     parser.add_argument("--skip-compliance", action="store_true")
     parser.add_argument("--max-compliance-images", type=int, default=64)
     return parser.parse_args()
@@ -65,7 +67,9 @@ def resolve_weights(override: Path | None) -> Path | None:
     )
 
 
-def ultralytics_val(weights: Path, data: Path, split: str, imgsz: int, conf: float, iou: float) -> dict[str, Any]:
+def ultralytics_val(
+    weights: Path, data: Path, split: str, imgsz: int, conf: float, iou: float
+) -> dict[str, Any]:
     from ultralytics import YOLO
 
     model = YOLO(str(weights))
@@ -110,7 +114,9 @@ def ultralytics_val(weights: Path, data: Path, split: str, imgsz: int, conf: flo
     }
 
 
-def compliance_summary(weights: Path, data: Path, split: str, imgsz: int, conf: float, limit: int) -> dict[str, Any]:
+def compliance_summary(
+    weights: Path, data: Path, split: str, imgsz: int, conf: float, limit: int
+) -> dict[str, Any]:
     from _common import discover_split_dirs, iter_split_images, load_yaml
 
     inference = load_inference()
@@ -206,7 +212,10 @@ def main() -> int:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(f"mAP50={metrics['map50']:.3f} mAP50-95={metrics['map50_95']:.3f} P={metrics['precision']:.3f} R={metrics['recall']:.3f}")
+    print(
+        f"mAP50={metrics['map50']:.3f} mAP50-95={metrics['map50_95']:.3f} "
+        f"P={metrics['precision']:.3f} R={metrics['recall']:.3f}"
+    )
     print(f"Wrote {args.out}")
     try:
         schema = load_schema()

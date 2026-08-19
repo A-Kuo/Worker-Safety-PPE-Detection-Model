@@ -1,4 +1,4 @@
-# E4 — YOLOv8n, 50 epochs on full Combined (~44k). Confirmation / shipped detector.
+# E4: YOLOv8n, 50 epochs on the full ~44k Combined set. The detector meant for shipping.
 experiment: e4_full44k
 model: yolov8n.pt
 data: configs/data/combined.yaml

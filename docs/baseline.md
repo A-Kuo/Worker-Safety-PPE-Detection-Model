@@ -1,11 +1,13 @@
 # Construction YOLOv8n baseline
 
-This is a **reproduced third-party baseline**, not a model trained in this repo.
+A third-party baseline, not a model trained in this repo.
 Weights, Ultralytics plots, and `results.csv` were inherited from
 [snehilsanyal/Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection)
-by **Snehil Sanyal**. Credit Snehil Sanyal and the Roboflow Construction Site Safety v28 dataset (CC BY 4.0).
+by Snehil Sanyal. Credit Snehil Sanyal and the Roboflow Construction Site
+Safety v28 dataset (CC BY 4.0).
 
-Do **not** compare this 10-class Construction mAP to a later 14-class Combined model as a like-for-like win.
+This 10-class Construction mAP is not comparable to a 14-class Combined
+model. The vocabularies differ, so the numbers measure different tasks.
 
 ## Headline numbers (epoch 99)
 
@@ -22,26 +24,30 @@ Best logged mAP50 is epoch 87 (0.80917). Best mAP50-95 is epoch 99 (0.50710).
 
 ## Dataset and split caveat
 
-- Dataset: Roboflow Universe [Construction Site Safety v28](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety/dataset/28).
+- Dataset: Roboflow Universe Construction Site Safety v28,
+  https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety/dataset/28
 - Classes (10): `Hardhat`, `Mask`, `NO-Hardhat`, `NO-Mask`, `NO-Safety Vest`, `Person`, `Safety Cone`, `Safety Vest`, `machinery`, `vehicle`.
-- Published split: **2605 / 114 / 82** (train / val / test).
-- **Val-size caveat (n=114):** per-class precision, recall, F1, and mAP on 114 images are noisy.
-  Do not treat a single-class swing as a real modeling result. Test (n=82) is even smaller.
-- `machinery` and `vehicle` exist only on this Construction baseline. They are **not** in the unified Combined 14-class schema.
+- Published split: 2605 / 114 / 82 (train / val / test).
+- Per-class precision, recall, F1, and mAP over 114 val images are noisy.
+  A single-class swing there is not a modeling result. Test (n=82) is smaller still.
+- `machinery` and `vehicle` exist only on this baseline. Neither is in the
+  unified 14-class schema.
 
 ## Artifacts used
 
-- Weights: `C:/GitHub/Worker Safety PPE Detection Model/baselines/snehilsanyal_yolov8n_css/models/best.pt`
-- Training log: `C:/GitHub/Worker Safety PPE Detection Model/baselines/snehilsanyal_yolov8n_css/results/results.csv`
-- Construction yaml: `C:/GitHub/Worker Safety PPE Detection Model/configs/data/construction.yaml`
+- Weights: `/home/user/Worker-Safety-PPE-Detection-Model/baselines/snehilsanyal_yolov8n_css/models/best.pt`
+- Training log: `/home/user/Worker-Safety-PPE-Detection-Model/baselines/snehilsanyal_yolov8n_css/results/results.csv`
+- Construction yaml: `/home/user/Worker-Safety-PPE-Detection-Model/configs/data/construction.yaml`
 - Image root: `not found` (0 images discovered)
 
 ## Ultralytics val (per-class)
 
-Per-class P / R / F1 / mAP **require a val pass** with Construction images on disk.
-Images were not available in this checkout (`data/raw/construction` and the original `train`/`valid`/`test` folders are empty or missing).
+Per-class P / R / F1 / mAP need a val pass with Construction images on
+disk, and this checkout has none (`data/raw/construction` and the
+original train/valid/test folders are empty or missing).
 
-The inherited `results.csv` only stores **global** box metrics, so class-wise numbers cannot be recovered from the CSV alone.
+The inherited `results.csv` stores global box metrics only, so per-class
+numbers cannot be recovered from it.
 Re-run:
 
 ```bash
@@ -52,16 +58,20 @@ after placing Construction v28 images (or setting `--data` / `--weights`).
 
 ## Confusion-matrix interpretation (inherited plot)
 
-Read from the shipped `C:/GitHub/Worker Safety PPE Detection Model/baselines/snehilsanyal_yolov8n_css/results/confusion_matrix.png` (normalized; **not** a substitute for Ultralytics per-class P/R/F1/mAP):
+Read from the shipped `/home/user/Worker-Safety-PPE-Detection-Model/baselines/snehilsanyal_yolov8n_css/results/confusion_matrix.png` (normalized, and no substitute for a real per-class val pass):
 
 - Strongest diagonal (recall-like): `machinery` ~0.93, `Safety Cone` ~0.91, `Mask` ~0.90.
 - Mid: `Person` ~0.80, `Safety Vest` ~0.78, `Hardhat` ~0.76.
 - Weakest: `NO-Safety Vest` ~0.70, `NO-Mask` ~0.66, `NO-Hardhat` ~0.62, `vehicle` ~0.57.
-- Safety-critical `NO-*` classes leak into **background** (missed violations): `NO-Hardhat` ~0.36, `NO-Mask` ~0.34.
-- `vehicle` is often missed entirely (~0.43 background FN). `Person` has a high background false-positive rate (~0.29).
-- Some `NO-Safety Vest` boxes are predicted as `Safety Vest` (~0.07) — the costly polarity flip for compliance.
+- The `NO-*` classes leak into background, which means missed violations:
+  `NO-Hardhat` ~0.36, `NO-Mask` ~0.34.
+- `vehicle` is often missed entirely (~0.43 background FN), and `Person`
+  has a high background false-positive rate (~0.29).
+- Some `NO-Safety Vest` boxes come back as `Safety Vest` (~0.07). That
+  polarity flip is the most expensive error a compliance system can make.
 
-These patterns are why later work sweeps confidence on `no_*` and reports recall-first operating points.
+Hence the confidence sweeps on `no_*` and the recall-first operating points
+in the calibration step.
 
 ## Per-epoch global metrics
 
@@ -176,4 +186,5 @@ Parsed from the inherited Ultralytics `results.csv` (one row per epoch). These a
 python scripts/eval_baseline.py
 ```
 
-The script always rewrites this file from `results.csv`. Per-class rows appear only when val images are present.
+The script rewrites this file from `results.csv`. Per-class rows appear
+only when val images are present.

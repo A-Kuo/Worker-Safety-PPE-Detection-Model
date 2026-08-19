@@ -4,24 +4,47 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ppe"
-version = "0.1.0"
-description = "Unified multi-domain PPE detection library"
+version = "0.2.0"
+description = "PPE compliance detection for site cameras, with an edge inference runtime"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "ultralytics>=8.1.0",
-    "numpy",
-    "opencv-python",
+    "numpy>=1.24",
     "pyyaml",
-    "torch",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+# The torch path. Heavy, and the only option for training.
+torch = ["ultralytics>=8.1.0", "torch"]
+# The device path: ONNX Runtime plus opencv, no torch.
+edge = ["onnxruntime>=1.16", "opencv-python-headless"]
+# FastAPI service and Streamlit UI.
+app = ["fastapi", "uvicorn", "python-multipart", "streamlit", "opencv-python-headless"]
+dev = ["pytest>=8", "pytest-cov", "httpx", "onnx", "ruff"]
+
+[project.scripts]
+ppe = "ppe.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "slow: takes more than a second",
+    "needs_weights: requires a real checkpoint on disk",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["baselines"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]

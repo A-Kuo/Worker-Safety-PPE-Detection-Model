@@ -1,53 +1,92 @@
-# Unified Multi-Domain PPE Compliance Detection
+# Worker Safety PPE Detection
 
-YOLOv8-based personal protective equipment (PPE) detection with a **unified 14-class schema**, person–PPE compliance association, and a local FastAPI + Streamlit demo. Construction Site Safety is documented as a **third-party baseline**; Hard Hat Universe is held out for domain evaluation.
+Personal protective equipment detection for site cameras. A YOLOv8 detector on a
+unified 14-class schema, an association step that ties each piece of gear to the
+person wearing it, and an edge runtime that turns that into alerts you can act on.
+The same runtime backs a CLI, a FastAPI service, and a Streamlit review UI.
 
 | | |
 |---|---|
-| **Train schema** | Combined PPE v4 → 14 unified classes (`helmet` / `no_helmet`, …) |
-| **Inherited baseline** | Construction YOLOv8n — mAP50 **0.809**, mAP50-95 **0.507** ([docs/baseline.md](docs/baseline.md)) |
-| **Demo** | [app/README.md](app/README.md) — FastAPI + Streamlit |
-| **Credits** | [ATTRIBUTION.md](ATTRIBUTION.md) |
+| Training schema | Combined PPE v4, remapped to 14 unified classes (`helmet`, `no_helmet`, and so on) |
+| Inherited baseline | Construction YOLOv8n, mAP50 0.809, mAP50-95 0.507 ([docs/baseline.md](docs/baseline.md)) |
+| Runtime | [docs/edge_runtime.md](docs/edge_runtime.md) |
+| Service and UI | [app/README.md](app/README.md) |
+| Credits | [ATTRIBUTION.md](ATTRIBUTION.md) |
 
 ---
 
-## 1. Overview
+## 1. What this does
 
-This repo turns construction/industrial PPE detection into a reproducible portfolio pipeline:
+A detector that reports helmets and people as separate boxes has not told you
+anything useful yet. The question on a site is who is missing gear, and whether
+they have been missing it long enough to be worth an alert.
 
-1. **Audit** an inherited Construction Site Safety YOLOv8n baseline (not claimed as our training).
-2. **Normalize** labels onto Combined PPE’s 14-class vocabulary.
-3. **Train / evaluate** via YAML configs and scripts (E0–E4 grid; metrics pending GPU + `ROBOFLOW_API_KEY`).
-4. **Calibrate** and cross-check domains; associate PPE boxes to `person` for compliance strings.
-5. **Ship** a local API + UI for image, video, and webcam review.
+The pipeline answers that in five steps:
 
-Core library: [`src/ppe/`](src/ppe/) (`schema`, `compliance`, `inference`). Prefer `from ppe...` after `pip install -e .` (or with `src/` on `PYTHONPATH`); `src.ppe` remains a fallback in scripts/app.
+1. Run a detector over the frame (PyTorch on a workstation, ONNX Runtime on a device).
+2. Map whatever vocabulary the checkpoint uses onto one unified label set.
+3. Track people across frames so worker 3 stays worker 3.
+4. Attach each PPE box to a person and compare against the required gear.
+5. Debounce the result, so a violation raises once it persists and then goes quiet.
+
+```python
+from ppe import EdgePipeline, RuntimeConfig
+
+pipeline = EdgePipeline.from_config(RuntimeConfig(weights="models/best.onnx"))
+for result in pipeline.process_stream(frames):
+    for event in result.events:
+        print(event.describe())  # worker 3 now no_helmet (4 frames, 0.5s)
+```
 
 ---
 
-## 2. Motivation
+## 2. Install
 
-Missed PPE on site is a leading industrial safety failure mode. OSHA and similar regimes emphasize hard hats, high-visibility vests, eye/face protection, and related gear. Computer vision can flag **missing** equipment (`no_helmet`, `no_vest`, …) in camera feeds—similar in spirit to Matroid-style visual inspection—without replacing human judgment.
+```bash
+python -m pip install -e ".[edge]"        # numpy, opencv, onnxruntime: runs on a device
+python -m pip install -e ".[torch]"       # ultralytics + torch: training and .pt files
+python -m pip install -e ".[app]"         # FastAPI service and Streamlit UI
+python -m pip install -e ".[edge,app,dev]"  # everything the test suite needs
+```
 
-This project focuses on:
-
-- A **shared label schema** across datasets so metrics are comparable.
-- **Recall-first** operating points on violation classes (`no_*`).
-- An honest split between **inherited artifacts** and **original engineering**.
+The core library depends on numpy and pyyaml only. Torch is an optional extra
+because a Jetson or an Intel NUC running the ONNX path does not need it.
 
 ---
 
-## 3. Data
+## 3. Command line
+
+```bash
+ppe classes                                     # print the 14-class schema
+ppe image site.jpg --weights models/best.onnx   # score a still or a directory
+ppe video clip.mp4 --save annotated.mp4         # score a clip, write an overlay
+ppe watch rtsp://cam.local/stream               # follow a live camera, print alerts
+ppe bench --frames 200 --json                   # latency and throughput
+ppe serve --port 8000                           # start the HTTP service
+```
+
+`python -m ppe` works the same way if you would rather not install the script.
+Every subcommand accepts `--backend {auto,ultralytics,onnx,stub}`, `--conf`,
+`--iou`, `--imgsz`, `--device`, `--required`, `--stride`, `--alert-frames`, and
+`--alert-cooldown`. Settings also come from `PPE_*` environment variables, and
+the command line wins over the environment.
+
+The `stub` backend replays scripted detections instead of loading a model, which
+is how the test suite and a first deployment dry-run avoid needing weights.
+
+---
+
+## 4. Data
 
 | Dataset | Role | Notes |
 |---|---|---|
-| [Construction Site Safety v28](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety/dataset/28) | Inherited baseline train/eval | 10 classes; split **2605 / 114 / 82**; val n=114 is too small for strong per-class claims |
-| [Personal Protective Equipment Combined Model v4](https://universe.roboflow.com/roboflow-universe-projects/personal-protective-equipment-combined-model/dataset/4) | **Unified train set** | ~44k images, 14 classes, 70/20/10 |
-| [Hard Hat Universe](https://universe.roboflow.com/universe-datasets/hard-hat-universe-0dy7t) | **Held-out** helmet-domain eval | ~7k; not mixed into training |
+| [Construction Site Safety v28](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety/dataset/28) | Inherited baseline train/eval | 10 classes; split 2605 / 114 / 82. A val split of 114 images cannot carry strong per-class claims |
+| [PPE Combined Model v4](https://universe.roboflow.com/roboflow-universe-projects/personal-protective-equipment-combined-model/dataset/4) | Unified training set | ~44k images, 14 classes, 70/20/10 |
+| [Hard Hat Universe](https://universe.roboflow.com/universe-datasets/hard-hat-universe-0dy7t) | Held-out helmet-domain eval | ~7k images, never mixed into training |
 
-**Licenses:** Roboflow Universe sets used here are **CC BY 4.0** — see [ATTRIBUTION.md](ATTRIBUTION.md).
+The Roboflow Universe sets are CC BY 4.0. See [ATTRIBUTION.md](ATTRIBUTION.md).
 
-**Label normalization** (Combined → unified):
+Label normalization, Combined to unified:
 
 | Combined raw | Unified |
 |---|---|
@@ -59,132 +98,143 @@ This project focuses on:
 | Person / Safety Cone | `person` / `cone` |
 | Ladder / Fall-Detected | `ladder` / `fall_detected` |
 
-Construction-only `machinery` / `vehicle` stay on the Construction baseline; they are **not** in the unified model. **Boots are out of scope** (Combined has no `boots` / `no_boots`).
+`machinery` and `vehicle` stay on the Construction baseline; they are not part of
+the unified model. Boots are out of scope because Combined has no boot classes.
 
-**No Construction ↔ Combined merge.** Construction already clones imagery from Combined and other Universe sets; merging without perceptual hashing would leak train/eval. Protocol: remap separately; evaluate Construction on mapped shared classes only.
+Construction is never merged into Combined. Construction already clones imagery
+from Combined and other Universe sets, so merging without perceptual hashing
+would leak training images into evaluation. Each is remapped separately, and
+Construction is scored on shared classes only.
 
-Configs: [`configs/data/`](configs/data/). Distribution notes: [`docs/data_distribution.md`](docs/data_distribution.md).
-
----
-
-## 4. Model Architecture
-
-- **Baseline / primary detector:** Ultralytics **YOLOv8n** (nano) — Construction inherited weights under [`baselines/snehilsanyal_yolov8n_css/`](baselines/snehilsanyal_yolov8n_css/); unified runs use the same family.
-- **Variants in the experiment grid:** YOLOv8**s** (E1); optional **m** only if E1 and E4 finish early.
-- **Compliance layer:** `src/ppe/compliance.py` associates PPE boxes to `person` via containment / IoU and emits strings like `Worker k — missing helmet, vest`.
-- **Optional VLM:** not implemented this cycle (see §8).
-
-External reference only (not our checkpoint): [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m on Combined v4).
+Configs: [`configs/data/`](configs/data/). Counts: [`docs/data_distribution.md`](docs/data_distribution.md).
 
 ---
 
-## 5. Training & Experiments
+## 5. Model
 
-Scripts and YAML drive training; nothing is claimed as a finished Combined run until GPU jobs complete with downloaded data.
+- Detector: Ultralytics YOLOv8n. The inherited Construction weights live under
+  [`baselines/snehilsanyal_yolov8n_css/`](baselines/snehilsanyal_yolov8n_css/);
+  unified runs use the same family.
+- Grid variants: YOLOv8s in E1, with YOLOv8m only if E1 and E4 finish early.
+- Compliance: [`src/ppe/compliance.py`](src/ppe/compliance.py) attaches PPE boxes
+  to people by containment or IoU and emits `Worker 3: missing helmet and vest`.
+- Tracking: [`src/ppe/tracking.py`](src/ppe/tracking.py), greedy IoU matching, no
+  motion model. Enough for fixed cameras and nearly free on a low-power device.
+
+External reference, not a checkpoint from here:
+[Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection).
+
+---
+
+## 6. Training and experiments
 
 | | |
 |---|---|
-| Configs | [`configs/train/`](configs/train/) — `e0_n`, `e1_s`, `e2_focal`, `e3_augs`, `e4_full44k` |
+| Configs | [`configs/train/`](configs/train/): `e0_n`, `e1_s`, `e2_focal`, `e3_augs`, `e4_full44k` |
 | Entry point | `python scripts/train.py --exp e0_n` |
 | Protocol | [`docs/experiments.md`](docs/experiments.md) |
 
-**Grid (one factor at a time, fixed seed / split):**
+One factor changes per run, on a fixed seed and split:
 
 | ID | Change | Data |
 |---|---|---|
-| E0 | YOLOv8n default | Stratified Combined **12k** subset |
+| E0 | YOLOv8n defaults | Stratified Combined 12k subset |
 | E1 | YOLOv8s | Same subset |
-| E2 | `fl_gamma=1.5` (focal) | Same subset |
-| E3 | Stronger augs (blur, brightness, crop) | Same subset |
-| E4 | YOLOv8n **50e** on full **44k** | Confirmation / shipped detector |
+| E2 | `fl_gamma=1.5` (focal loss) | Same subset |
+| E3 | Heavier augmentation (blur, brightness, crop) | Same subset |
+| E4 | YOLOv8n, 50 epochs on the full 44k | Confirmation run, shipped detector |
 
-**Metrics pending** until `ROBOFLOW_API_KEY` downloads succeed and GPU training runs finish. Do not compare Combined 14-class mAP to Construction 10-class mAP as a like-for-like win; use `SHARED_EVAL_CLASSES` for fair slices.
+Combined metrics are pending: they need `ROBOFLOW_API_KEY` for the downloads and
+a GPU for the runs. When they land, 14-class Combined mAP and 10-class
+Construction mAP will still measure different tasks; compare on
+`SHARED_EVAL_CLASSES` instead.
 
 ---
 
-## 6. Evaluation & Mathematical Analysis
+## 7. Evaluation
 
-### Inherited Construction baseline (documented, not our train)
-
-From [`docs/baseline.md`](docs/baseline.md) / inherited `results.csv` (epoch 99):
+The inherited Construction baseline, from its own `results.csv` at epoch 99:
 
 | Metric | Value |
 |---|---|
-| mAP@0.50 | **0.809** |
-| mAP@0.50:0.95 | **0.507** |
-| Precision | **0.900** |
-| Recall | **0.731** |
+| mAP@0.50 | 0.809 |
+| mAP@0.50:0.95 | 0.507 |
+| Precision | 0.900 |
+| Recall | 0.731 |
 
-Per-class Ultralytics val needs Construction images on disk (`python scripts/eval_baseline.py`). Confusion-matrix takeaways (inherited plot): `NO-*` classes leak into background — motivation for recall-first threshold sweeps.
-
-### Scripts for rigor (after Combined weights exist)
+Its confusion matrix shows `NO-*` classes leaking into background, which is a
+missed violation and the reason the calibration step sweeps confidence on those
+classes specifically. Per-class numbers need Construction images on disk and a
+run of `python scripts/eval_baseline.py`.
 
 | Script | Purpose |
 |---|---|
 | `scripts/eval.py` | In-domain Combined eval |
-| `scripts/eval_cross_domain.py` | Combined / Construction (mapped) / HHU tables |
-| `scripts/calibrate.py` | ECE, Brier, `no_*` confidence sweeps (target R ≥ 0.90) |
-| `scripts/benchmark.py` + `export_onnx.py` | Latency / FPS / memory (PyTorch vs ONNX) |
+| `scripts/eval_cross_domain.py` | Combined, Construction (mapped), and HHU tables |
+| `scripts/calibrate.py` | ECE, Brier, and `no_*` confidence sweeps at recall 0.90 |
+| `scripts/benchmark.py`, `scripts/export_onnx.py` | Latency, FPS, memory, PyTorch against ONNX |
 
 ---
 
-## 7. Deployment
-
-Local demo only — see **[app/README.md](app/README.md)** for weights env vars and endpoints.
+## 8. Service and UI
 
 ```bash
-# From repo root
-python -m pip install -r requirements.txt
-python -m pip install -r app/requirements.txt
-# Optional editable install for `from ppe...`:
-python -m pip install -e .
-
-# API
-uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
-# or: python -m app.api.main
-
-# UI (second terminal)
-streamlit run app/ui/streamlit_app.py
+python -m pip install -e ".[app]"
+ppe serve --port 8000                       # or: uvicorn app.api.main:app --reload
+streamlit run app/ui/streamlit_app.py       # second terminal
 ```
 
-OpenAPI: http://127.0.0.1:8000/docs — `POST /predict/image`, `POST /predict/video`, `GET /stream` (MJPEG).
+OpenAPI at http://127.0.0.1:8000/docs. Endpoints: `GET /health`, `GET /metrics`,
+`GET /classes`, `POST /predict/image`, `POST /predict/video`, `GET /clips/{name}`,
+`GET /stream` (MJPEG). Details and curl examples in [app/README.md](app/README.md).
 
-Default weights: `PPE_WEIGHTS`, else first existing of `baselines/snehilsanyal_yolov8n_css/models/best.pt` or `models/best.pt`.
-
----
-
-## 8. Optional VLM Layer (future)
-
-Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a labeled frame bank for retrieval (“frames with missing vests”) — Matroid-shaped multimodal search without claiming captioning SOTA. Prefer retrieval over generative theater until the detector path is solid.
+Weights resolve from `PPE_WEIGHTS`, then
+`baselines/snehilsanyal_yolov8n_css/models/best.pt`, then `models/best.pt`.
 
 ---
 
-## 9. Future Work
+## 9. Tests
 
-- Multi-object **tracking** (ByteTrack / BoT-SORT) for stable worker IDs across frames
-- **SCADA / MES** hooks for plant alarms and shift dashboards
-- **IR / thermal** cameras for low-light and outdoor night shifts
-- Optional YOLOv8m (E5) and INT8 quantization appendix after E4 latency numbers exist
+```bash
+python -m pip install -e ".[edge,app,dev]"
+pytest
+ruff check . && ruff format --check .
+```
+
+The suite runs without a checkpoint, a GPU, or a camera. It builds a synthetic
+ONNX graph to exercise the real ONNX Runtime path, generates video with OpenCV
+for the source and API tests, and drives everything else through the stub
+backend. CI runs the same three commands on Python 3.10 through 3.12.
 
 ---
 
-## 10. What I inherited vs what I built
+## 10. Future work
 
-| Inherited (third-party) | Built in this repo |
+- Appearance features in the tracker for crossing workers and long occlusions
+- SCADA and MES hooks so alerts reach plant alarms and shift dashboards
+- Infrared and thermal cameras for night shifts and low light
+- INT8 quantization once E4 gives real latency numbers to compare against
+- Frame retrieval over a labeled bank ("frames with missing vests") using a
+  frozen image encoder, once the detector path is solid
+
+---
+
+## 11. Inherited versus built here
+
+| Inherited | Built here |
 |---|---|
-| Snehil Sanyal Construction YOLOv8n weights, plots, `results.csv`, sample media | `src/ppe/` schema, compliance, inference |
-| Original Roboflow Construction notes / yaml layout | `scripts/` download → remap → subset → analyze → train → eval → calibrate → export → benchmark |
-| Artifact dump moved under `baselines/snehilsanyal_yolov8n_css/` | `configs/data`, `configs/train`, docs, tests |
-| | FastAPI + Streamlit demo under `app/` |
-| | Honest attribution and portfolio README |
+| Snehil Sanyal's Construction YOLOv8n weights, plots, `results.csv`, sample media | `src/ppe/`: schema, compliance, tracking, events, backends, pipeline, CLI |
+| The original Roboflow Construction notes and yaml layout | `scripts/`: download, remap, subset, analyze, train, eval, calibrate, export, benchmark |
+| That artifact dump, relocated under `baselines/snehilsanyal_yolov8n_css/` | `configs/`, `docs/`, and the test suite |
+| | The FastAPI service and Streamlit UI under `app/` |
 
-**Do not** present `baselines/.../models/best.pt` as a model trained here.
+`baselines/.../models/best.pt` was not trained here.
 
 ### Citations
 
-- **Snehil Sanyal** — [Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection)
-- **Roboflow Universe** datasets above — **CC BY 4.0**
-- **Hexmon/vyra-yolo-ppe-detection** — external Combined v4 reference only
+- Snehil Sanyal, [Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection)
+- The Roboflow Universe datasets above, CC BY 4.0
+- Hexmon/vyra-yolo-ppe-detection, an external Combined v4 reference
 
 Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
 
@@ -193,22 +243,22 @@ Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
 ## Repo map
 
 ```text
-src/ppe/           # schema, compliance, inference
-scripts/           # pipeline CLIs (+ run_pipeline.md)
-configs/data/      # construction, combined, hardhat_eval
-configs/train/     # E0–E4 experiment YAMLs
-app/               # FastAPI + Streamlit
-docs/              # baseline, experiments, data_distribution
-baselines/         # inherited Snehil Construction artifacts
-tests/             # schema + compliance unit tests
+src/ppe/           schema, compliance, tracking, events, backends, pipeline, cli
+scripts/           dataset and training CLIs (see run_pipeline.md)
+configs/data/      construction, combined, hardhat_eval
+configs/train/     E0-E4 experiment yamls
+app/               FastAPI service and Streamlit UI
+docs/              baseline, experiments, data_distribution, edge_runtime
+baselines/         inherited Construction artifacts
+tests/             the pytest suite
 ```
 
-### End-to-end command sequence
+### End-to-end dataset pipeline
 
-See also [`scripts/run_pipeline.md`](scripts/run_pipeline.md).
+Also in [`scripts/run_pipeline.md`](scripts/run_pipeline.md). Downloads need
+`ROBOFLOW_API_KEY`; training and eval want a GPU.
 
 ```bash
-# Requires ROBOFLOW_API_KEY for downloads; GPU recommended for train/eval
 python scripts/download_datasets.py --execute
 python scripts/remap_labels.py --source data/raw/combined --out data/processed/combined --mapping combined
 python scripts/remap_labels.py --source data/raw/hardhat --out data/processed/hardhat --mapping hhu
@@ -220,12 +270,4 @@ python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e0_n/weights/best.pt
 python scripts/export_onnx.py --weights runs/train/e0_n/weights/best.pt
 python scripts/benchmark.py --weights runs/train/e0_n/weights/best.pt
-# Then launch app/ (see §7)
-```
-
-### Quick checks
-
-```bash
-python -c "from ppe.schema import UNIFIED_CLASS_NAMES; print(len(UNIFIED_CLASS_NAMES))"  # → 14
-pytest tests/
 ```

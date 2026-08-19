@@ -1,4 +1,4 @@
-# Hard Hat Universe — held-out domain eval only (do not mix into training).
+# Hard Hat Universe: held-out domain eval. Never mixed into training.
 # Remap helmet / hi-viz helmet / hi-viz vest / person / head onto UNIFIED_CLASS_NAMES.
 path: data/raw/hardhat
 train: train/images

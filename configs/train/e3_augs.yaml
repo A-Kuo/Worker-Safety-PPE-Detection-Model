@@ -1,4 +1,4 @@
-# E3 — YOLOv8n + stronger industrial-camera augs (blur/brightness/occlusion-ish crop).
+# E3: YOLOv8n with heavier augmentation for industrial cameras: blur, brightness, crop.
 # Same subset/seed as E0. Native Ultralytics keys plus blur_* for the train wrapper.
 experiment: e3_augs
 model: yolov8n.pt

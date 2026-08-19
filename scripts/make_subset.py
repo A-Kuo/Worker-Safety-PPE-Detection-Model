@@ -154,7 +154,7 @@ def main() -> int:
     list_rel: dict[str, str] = {}
     presence_before: Counter[int] = Counter()
     presence_after: Counter[int] = Counter()
-    for split, recs in split_recs.items():
+    for recs in split_recs.values():
         for rec in recs:
             presence_before.update(rec["classes"])
     for split, recs in chosen.items():
@@ -199,7 +199,10 @@ def main() -> int:
         "split_counts": {k: len(v) for k, v in chosen.items()},
         "class_presence_full": _named(presence_before),
         "class_presence_subset": _named(presence_after),
-        "note": "Stratified on class *presence* (images containing the class) and split proportions. Not a Construction merge.",
+        "note": (
+            "Stratified on class presence (images containing the class) and on "
+            "split proportions. Construction is not part of this subset."
+        ),
     }
     (dest / "subset_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(f"Wrote {dest / 'data.yaml'} ({manifest['n_selected']} images)")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI wrapper around Ultralytics ``YOLO.train`` for the E0–E4 configs.
+"""CLI wrapper around Ultralytics ``YOLO.train`` for the E0-E4 configs.
 
 Reads ``configs/train/{e0_n,e1_s,e2_focal,e3_augs,e4_full44k}.yaml``.
 Resume-friendly. ``--dry-run`` prints the resolved kwargs and exits - this
