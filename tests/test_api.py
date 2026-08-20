@@ -11,6 +11,7 @@ from helpers import HELMET_BOX, PERSON_BOX, VEST_BOX, detection
 from ppe.backends import StubBackend
 from ppe.config import RuntimeConfig
 from ppe.pipeline import EdgePipeline
+from ppe.providers import available_npu_providers
 from ppe.sources import open_writer
 
 pytest.importorskip("fastapi", reason="the API layer needs fastapi")
@@ -197,3 +198,48 @@ def test_predict_image_503s_without_a_usable_model(offline, jpeg_bytes, monkeypa
     monkeypatch.setenv("PPE_WEIGHTS", "/nowhere/best.pt")
     response = offline.post("/predict/image", files={"file": ("f.jpg", jpeg_bytes, "image/jpeg")})
     assert response.status_code == 503
+
+
+def test_devices_endpoint_lists_providers(serving):
+    body = serving.get("/devices").json()
+    assert body["onnxruntime"]
+    assert "CPUExecutionProvider" in body["installed_providers"]
+    assert any(row["vendor"] == "Qualcomm" for row in body["providers"])
+
+
+def test_health_reports_the_execution_policy(serving):
+    body = serving.get("/health").json()
+    assert body["execution"] == "npu"
+    assert body["npu_available"] == [s.name for s in available_npu_providers()]
+
+
+def test_health_follows_the_execution_environment(offline, monkeypatch):
+    monkeypatch.setenv("PPE_EXECUTION", "cpu")
+    assert offline.get("/health").json()["execution"] == "cpu"
+
+
+def test_health_warns_when_strict_npu_cannot_be_satisfied(offline, monkeypatch, tmp_path):
+    if available_npu_providers():
+        pytest.skip("this host has an NPU provider")
+    model = tmp_path / "best.onnx"
+    model.write_bytes(b"placeholder")
+    monkeypatch.setenv("PPE_WEIGHTS", str(model))
+    monkeypatch.setenv("PPE_EXECUTION", "npu")
+    body = offline.get("/health").json()
+    assert body["ready"] is False
+    assert "No NPU execution provider" in body["detail"]
+
+
+def test_metrics_reports_the_execution_policy(serving, jpeg_bytes):
+    serving.post("/predict/image", files={"file": ("f.jpg", jpeg_bytes, "image/jpeg")})
+    body = serving.get("/metrics").json()
+    assert body["execution"] == "npu"
+    assert body["provider"] is None  # the stub backend binds no provider
+
+
+def test_health_flags_a_non_onnx_checkpoint(offline, monkeypatch, tmp_path):
+    checkpoint = tmp_path / "best.pt"
+    checkpoint.write_bytes(b"not really a checkpoint")
+    monkeypatch.setenv("PPE_WEIGHTS", str(checkpoint))
+    body = offline.get("/health").json()
+    assert "not an ONNX model" in body["detail"]

@@ -22,12 +22,14 @@ frame -> backend -> unify labels -> tracker -> compliance -> alert monitor
 
 | Name | Needs | Use it for |
 |---|---|---|
-| `ultralytics` | `ultralytics`, `torch` | `.pt` checkpoints, training, a workstation |
-| `onnx` | `onnxruntime` | Devices. No torch, and the postprocessing is plain numpy |
+| `onnx` | `onnxruntime` bound to an NPU | Every deployment. No torch, postprocessing is plain numpy |
 | `stub` | nothing | Tests, and wiring a deployment before weights exist |
+| `ultralytics` | `ultralytics`, `torch`, `PPE_ALLOW_TORCH=1` | Diffing an export against its checkpoint, on a workstation |
 
-`backend="auto"` reads the weights extension: `.onnx` picks the ONNX path,
-anything else picks ultralytics.
+`backend="auto"` always resolves to `onnx`. It does not read the file
+extension, so a `.pt` path fails with export instructions rather than loading
+torch onto a device. Provider selection and the strict NPU policy are in
+[npu_runtime.md](npu_runtime.md).
 
 The ONNX path does its own work rather than borrowing Ultralytics' helpers, all
 of it in `ppe.postprocess`:
@@ -50,9 +52,11 @@ environment variable, and `config_from_env()` reads them.
 
 | Field | Env | Default | Effect |
 |---|---|---|---|
-| `weights` | `PPE_WEIGHTS` | none | Checkpoint path |
-| `backend` | `PPE_BACKEND` | `auto` | Which implementation to load |
-| `device` | `PPE_DEVICE` | auto | `cpu`, `cuda`, or an index (ultralytics only) |
+| `weights` | `PPE_WEIGHTS` | see npu_runtime | Path to the `.onnx` model |
+| `backend` | `PPE_BACKEND` | `auto` | Which implementation to load; `auto` means `onnx` |
+| `execution` | `PPE_EXECUTION` | `npu` | `npu`, `npu-preferred`, or `cpu` |
+| `provider` | `PPE_PROVIDER` | none | Pin one execution provider |
+| `device` | `PPE_DEVICE` | auto | Torch device, reference backend only |
 | `imgsz` | `PPE_IMGSZ` | 640 | Inference size, a multiple of 32 |
 | `conf` | `PPE_CONF` | 0.25 | Confidence floor |
 | `iou` | `PPE_IOU` | 0.45 | NMS overlap threshold |
@@ -88,11 +92,15 @@ alerting one; check `conf` against the calibration sweeps in `docs/experiments.m
 
 ```python
 pipeline.stats()
-# {'backend': 'onnx', 'frames': 412, 'tracks_open': 3,
-#  'active_violations': 1,
+# {'backend': 'onnx', 'provider': 'QNNExecutionProvider', 'execution': 'npu',
+#  'frames': 412, 'tracks_open': 3, 'active_violations': 1,
 #  'latency': {'frames': 412, 'window': 200, 'mean_ms': 24.1,
 #              'p50_ms': 23.4, 'p95_ms': 31.8, 'max_ms': 58.2, 'fps': 41.5}}
 ```
+
+`provider` is the one the session actually bound, not the one that was asked
+for. If it reads `CPUExecutionProvider` on a device, the accelerator is not
+doing the work.
 
 p95 matters more than the mean here. A stream that drops a frame every twenty is
 a stream that misses violations, and the mean hides that.

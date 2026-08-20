@@ -156,6 +156,8 @@ class EdgePipeline:
     def stats(self) -> dict:
         return {
             "backend": getattr(self.backend, "name", type(self.backend).__name__),
+            "provider": getattr(self.backend, "provider", None),
+            "execution": self.config.execution,
             "frames": self._frame_index + 1,
             "tracks_open": len(self.tracker.tracks),
             "active_violations": len(self.monitor.active()),

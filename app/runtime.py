@@ -18,6 +18,7 @@ ensure_src_on_path()
 
 from ppe.config import RuntimeConfig, config_from_env  # noqa: E402
 from ppe.pipeline import EdgePipeline  # noqa: E402
+from ppe.providers import available_npu_providers  # noqa: E402
 
 PIPELINE_LOCK = threading.Lock()
 
@@ -34,6 +35,9 @@ class RuntimeStatus:
     weights: Path
     weights_exist: bool
     backend: str
+    execution: str
+    provider: str | None
+    npu_available: list[str]
     device: str | None
     detail: str | None = None
 
@@ -98,12 +102,31 @@ def runtime_status() -> RuntimeStatus:
     weights = resolve_weights_path()
     exists = weights.is_file()
     loaded = _pipeline is not None
-    detail = None if exists or loaded else f"Weights missing at {weights}. Set PPE_WEIGHTS."
+    config = build_config()
+    npu = [spec.name for spec in available_npu_providers()]
+
+    detail = None
+    if not exists and not loaded:
+        detail = f"Weights missing at {weights}. Set PPE_WEIGHTS."
+    elif not loaded and config.backend_name == "onnx" and weights.suffix.lower() != ".onnx":
+        detail = (
+            f"{weights.name} is not an ONNX model. Inference runs on ONNX Runtime; "
+            "export the checkpoint with scripts/export_onnx.py first."
+        )
+    elif not loaded and config.npu_only and not npu:
+        detail = (
+            "No NPU execution provider is installed, so loading will fail under "
+            "PPE_EXECUTION=npu. Run `ppe devices` for install hints."
+        )
+
     return RuntimeStatus(
-        ready=loaded or exists,
+        ready=bool(loaded or (exists and (npu or not config.npu_only))),
         weights=weights,
         weights_exist=exists,
-        backend=build_config().backend_name,
+        backend=config.backend_name,
+        execution=config.execution,
+        provider=getattr(_pipeline.backend, "provider", None) if _pipeline else None,
+        npu_available=npu,
         device=default_device(),
         detail=detail,
     )

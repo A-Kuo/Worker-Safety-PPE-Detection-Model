@@ -16,15 +16,48 @@ def test_defaults_are_usable():
     assert config.imgsz == 640
 
 
-def test_backend_auto_follows_the_weights_extension():
+def test_auto_always_resolves_to_onnx():
+    # A .pt path must not pull torch onto a device by accident.
     assert RuntimeConfig(weights=Path("model.onnx")).backend_name == "onnx"
-    assert RuntimeConfig(weights=Path("best.pt")).backend_name == "ultralytics"
-    assert RuntimeConfig().backend_name == "ultralytics"
+    assert RuntimeConfig(weights=Path("best.pt")).backend_name == "onnx"
+    assert RuntimeConfig().backend_name == "onnx"
 
 
 def test_an_explicit_backend_wins():
     config = RuntimeConfig(weights=Path("best.pt"), backend="stub")
     assert config.backend_name == "stub"
+
+
+def test_npu_is_the_default_execution_policy():
+    assert RuntimeConfig().execution == "npu"
+    assert RuntimeConfig().npu_only is True
+    assert RuntimeConfig(execution="npu-preferred").npu_only is False
+
+
+def test_provider_options_parse_from_the_environment():
+    config = config_from_env(
+        {
+            "PPE_PROVIDER": "QNNExecutionProvider",
+            "PPE_PROVIDER_OPTIONS": "htp_performance_mode=sustained_high_performance,soc_model=60",
+        }
+    )
+    assert config.provider == "QNNExecutionProvider"
+    assert config.provider_options["htp_performance_mode"] == "sustained_high_performance"
+    assert config.provider_options["soc_model"] == "60"
+
+
+def test_malformed_provider_options_are_rejected():
+    with pytest.raises(ValueError, match="not key=value"):
+        config_from_env({"PPE_PROVIDER_OPTIONS": "htp_performance_mode"})
+
+
+def test_execution_policy_is_validated():
+    with pytest.raises(ValueError, match="execution must be one of"):
+        RuntimeConfig(execution="gpu")
+
+
+def test_execution_policy_from_the_environment():
+    assert config_from_env({"PPE_EXECUTION": "cpu"}).execution == "cpu"
 
 
 @pytest.mark.parametrize(

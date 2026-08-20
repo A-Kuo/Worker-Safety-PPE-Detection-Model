@@ -11,12 +11,14 @@ import os
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from ppe.providers import EXECUTION_POLICIES
 from ppe.schema import UNIFIED_CLASS_NAMES
 
 ENV_PREFIX = "PPE_"
 
 DEFAULT_REQUIRED_PPE = ("helmet", "vest")
 DEFAULT_IMAGE_SIZE = 640
+BACKENDS = ("auto", "onnx", "stub", "ultralytics")
 
 
 @dataclass(frozen=True)
@@ -25,6 +27,9 @@ class RuntimeConfig:
 
     weights: Path | None = None
     backend: str = "auto"
+    execution: str = "npu"
+    provider: str | None = None
+    provider_options: dict[str, str] = field(default_factory=dict)
     device: str | None = None
     imgsz: int = DEFAULT_IMAGE_SIZE
     conf: float = 0.25
@@ -59,16 +64,26 @@ class RuntimeConfig:
         unknown = [name for name in self.required_ppe if name not in UNIFIED_CLASS_NAMES]
         if unknown:
             raise ValueError(f"required_ppe contains unknown classes: {unknown}")
+        if self.backend not in BACKENDS:
+            raise ValueError(f"backend must be one of {BACKENDS}, got {self.backend!r}")
+        if self.execution not in EXECUTION_POLICIES:
+            raise ValueError(
+                f"execution must be one of {EXECUTION_POLICIES}, got {self.execution!r}"
+            )
 
     @property
     def backend_name(self) -> str:
-        """Concrete backend, resolving ``auto`` from the weights extension."""
-        if self.backend != "auto":
-            return self.backend
-        suffix = self.weights.suffix.lower() if self.weights else ""
-        if suffix == ".onnx":
-            return "onnx"
-        return "ultralytics"
+        """Concrete backend. ``auto`` always means ONNX on an NPU.
+
+        The torch backend is never selected implicitly, so a checkpoint path
+        that was never exported fails with an export instruction instead of
+        loading torch on a device that should not have it.
+        """
+        return "onnx" if self.backend == "auto" else self.backend
+
+    @property
+    def npu_only(self) -> bool:
+        return self.execution == "npu"
 
     def with_overrides(self, **kwargs) -> RuntimeConfig:
         clean = {k: v for k, v in kwargs.items() if v is not None}
@@ -89,6 +104,9 @@ def config_from_env(env: dict[str, str] | None = None) -> RuntimeConfig:
     return RuntimeConfig(
         weights=Path(weights).expanduser() if weights else None,
         backend=read("BACKEND") or "auto",
+        execution=read("EXECUTION") or "npu",
+        provider=read("PROVIDER"),
+        provider_options=_parse_options(read("PROVIDER_OPTIONS")),
         device=read("DEVICE"),
         imgsz=int(read("IMGSZ") or DEFAULT_IMAGE_SIZE),
         conf=float(read("CONF") or 0.25),
@@ -100,6 +118,21 @@ def config_from_env(env: dict[str, str] | None = None) -> RuntimeConfig:
         alert_cooldown_s=float(read("ALERT_COOLDOWN") or 10.0),
         frame_stride=int(read("FRAME_STRIDE") or 1),
     )
+
+
+def _parse_options(raw: str | None) -> dict[str, str]:
+    """Parse ``key=value,key=value`` provider options."""
+    if not raw:
+        return {}
+    options: dict[str, str] = {}
+    for pair in raw.split(","):
+        if not pair.strip():
+            continue
+        key, sep, value = pair.partition("=")
+        if not sep:
+            raise ValueError(f"Provider option {pair.strip()!r} is not key=value")
+        options[key.strip()] = value.strip()
+    return options
 
 
 def _parse_required(raw: str | None) -> tuple[str, ...]:

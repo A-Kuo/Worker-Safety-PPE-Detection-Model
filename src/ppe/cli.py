@@ -1,6 +1,7 @@
 """Command line entry point: ``python -m ppe`` or the installed ``ppe`` script.
 
 Subcommands
+    ``devices``  list NPU execution providers and whether this host has them
     ``image``    score stills, optionally writing annotated copies
     ``video``    score a clip and print a run summary
     ``watch``    follow a camera or RTSP stream and print alerts as they raise
@@ -18,8 +19,9 @@ import time
 from pathlib import Path
 
 from ppe import __version__
-from ppe.config import RuntimeConfig, config_from_env
+from ppe.config import BACKENDS, RuntimeConfig, config_from_env
 from ppe.pipeline import EdgePipeline, summarize_run
+from ppe.providers import EXECUTION_POLICIES, describe_environment
 from ppe.schema import UNIFIED_CLASS_NAMES
 
 
@@ -66,6 +68,10 @@ def build_parser() -> argparse.ArgumentParser:
     _add_output_args(classes)
     classes.set_defaults(handler=cmd_classes)
 
+    devices = subparsers.add_parser("devices", help="list NPU execution providers on this host")
+    _add_output_args(devices)
+    devices.set_defaults(handler=cmd_devices)
+
     serve = subparsers.add_parser("serve", help="start the FastAPI service")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -77,9 +83,27 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _add_model_args(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("model")
-    group.add_argument("--weights", help="checkpoint path (.pt or .onnx); defaults to PPE_WEIGHTS")
-    group.add_argument("--backend", choices=("auto", "ultralytics", "onnx", "stub"), default=None)
-    group.add_argument("--device", help="cpu, cuda, or a device index")
+    group.add_argument("--weights", help="ONNX model path; defaults to PPE_WEIGHTS")
+    group.add_argument(
+        "--backend",
+        choices=BACKENDS,
+        default=None,
+        help="auto resolves to onnx; ultralytics also needs PPE_ALLOW_TORCH=1",
+    )
+    group.add_argument(
+        "--execution",
+        choices=EXECUTION_POLICIES,
+        default=None,
+        help="npu fails when no NPU provider is present; npu-preferred falls back to CPU",
+    )
+    group.add_argument("--provider", help="pin one execution provider, e.g. QNNExecutionProvider")
+    group.add_argument(
+        "--provider-option",
+        action="append",
+        metavar="KEY=VALUE",
+        help="provider option override; repeatable",
+    )
+    group.add_argument("--device", help="torch device for the reference backend only")
     group.add_argument("--conf", type=float, help="confidence threshold")
     group.add_argument("--iou", type=float, help="NMS IoU threshold")
     group.add_argument("--imgsz", type=int, help="inference size, a multiple of 32")
@@ -97,9 +121,13 @@ def config_from_args(args: argparse.Namespace) -> RuntimeConfig:
     """Environment first, command line on top."""
     config = config_from_env()
     required = getattr(args, "required", None)
+    options = _parse_provider_options(getattr(args, "provider_option", None))
     return config.with_overrides(
         weights=Path(args.weights).expanduser() if getattr(args, "weights", None) else None,
         backend=getattr(args, "backend", None),
+        execution=getattr(args, "execution", None),
+        provider=getattr(args, "provider", None),
+        provider_options={**config.provider_options, **options} if options else None,
         device=getattr(args, "device", None),
         conf=getattr(args, "conf", None),
         iou=getattr(args, "iou", None),
@@ -111,6 +139,44 @@ def config_from_args(args: argparse.Namespace) -> RuntimeConfig:
         alert_min_frames=getattr(args, "alert_frames", None),
         alert_cooldown_s=getattr(args, "alert_cooldown", None),
     )
+
+
+def _parse_provider_options(pairs: list[str] | None) -> dict[str, str]:
+    options: dict[str, str] = {}
+    for pair in pairs or []:
+        key, sep, value = pair.partition("=")
+        if not sep:
+            raise ValueError(f"--provider-option expects KEY=VALUE, got {pair!r}")
+        options[key.strip()] = value.strip()
+    return options
+
+
+def cmd_devices(args: argparse.Namespace) -> int:
+    """Report which accelerators this host can actually bind."""
+    env = describe_environment()
+    if args.json:
+        _emit(env)
+        return 0 if env["npu_available"] else 1
+
+    print(f"onnxruntime {env['onnxruntime']} on {env['platform']}")
+    print(f"installed providers: {', '.join(env['installed_providers'])}")
+    print()
+    width = max(len(row["provider"]) for row in env["providers"])
+    for row in env["providers"]:
+        mark = "yes" if row["available"] else "no "
+        print(f"  [{mark}] {row['provider']:<{width}}  {row['vendor']} {row['hardware']}")
+        if not row["available"]:
+            print(f"        {row['install']}")
+    print()
+
+    if env["npu_available"]:
+        print(f"NPU ready: {', '.join(env['npu_available'])}")
+        return 0
+    print(
+        "No NPU execution provider is installed, so --execution npu will refuse to start.\n"
+        "Install one of the builds above, or pass --execution cpu to accept CPU inference."
+    )
+    return 1
 
 
 def cmd_classes(args: argparse.Namespace) -> int:

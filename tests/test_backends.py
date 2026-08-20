@@ -14,8 +14,17 @@ import numpy as np
 import pytest
 from helpers import PERSON_BOX, detection
 
-from ppe.backends import OnnxBackend, RawDetection, StubBackend, load_backend
+from ppe.backends import (
+    TORCH_OPT_IN,
+    OnnxBackend,
+    RawDetection,
+    StubBackend,
+    UltralyticsBackend,
+    _check_input_shape,
+    load_backend,
+)
 from ppe.config import RuntimeConfig
+from ppe.providers import NpuUnavailable, available_npu_providers
 from ppe.schema import UNIFIED_CLASS_NAMES
 
 onnx = pytest.importorskip("onnx", reason="building a test model needs the onnx package")
@@ -92,13 +101,25 @@ def test_load_backend_needs_weights():
         load_backend(RuntimeConfig(backend="onnx"))
 
 
-def test_load_backend_rejects_an_unknown_name():
-    with pytest.raises(ValueError, match="Unknown backend"):
-        load_backend(RuntimeConfig(backend="tensorrt", weights=Path("x.engine")))
+def test_config_rejects_an_unknown_backend():
+    with pytest.raises(ValueError, match="backend must be one of"):
+        RuntimeConfig(backend="tensorrt", weights=Path("x.engine"))
+
+
+def test_the_torch_backend_needs_an_explicit_opt_in(monkeypatch):
+    monkeypatch.delenv(TORCH_OPT_IN, raising=False)
+    with pytest.raises(RuntimeError, match="not a deployment target"):
+        UltralyticsBackend("best.pt")
+
+
+def test_the_torch_backend_error_names_the_export_path(monkeypatch):
+    monkeypatch.delenv(TORCH_OPT_IN, raising=False)
+    with pytest.raises(RuntimeError, match="export_onnx.py"):
+        load_backend(RuntimeConfig(backend="ultralytics", weights=Path("best.pt")))
 
 
 def test_onnx_backend_infers_a_person(onnx_model):
-    backend = OnnxBackend(onnx_model, conf=0.25)
+    backend = OnnxBackend(onnx_model, conf=0.25, execution="cpu")
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
     detections = backend.infer(frame)
     assert len(detections) == 1
@@ -108,7 +129,7 @@ def test_onnx_backend_infers_a_person(onnx_model):
 
 
 def test_onnx_boxes_land_in_source_coordinates(onnx_model):
-    backend = OnnxBackend(onnx_model)
+    backend = OnnxBackend(onnx_model, execution="cpu")
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
     x1, y1, x2, y2 = backend.infer(frame)[0].xyxy
     # 640x480 letterboxes with 80px bars, so the canvas center maps to (320, 240).
@@ -119,28 +140,60 @@ def test_onnx_boxes_land_in_source_coordinates(onnx_model):
 
 
 def test_onnx_respects_the_confidence_threshold(onnx_model):
-    backend = OnnxBackend(onnx_model, conf=0.95)
+    backend = OnnxBackend(onnx_model, conf=0.95, execution="cpu")
     assert backend.infer(np.zeros((480, 640, 3), dtype=np.uint8)) == []
 
 
 def test_onnx_reads_class_names_from_metadata(onnx_model):
-    assert OnnxBackend(onnx_model).class_names() == dict(enumerate(UNIFIED_CLASS_NAMES))
+    backend = OnnxBackend(onnx_model, execution="cpu")
+    assert backend.class_names() == dict(enumerate(UNIFIED_CLASS_NAMES))
 
 
 def test_onnx_takes_its_input_size_from_the_graph(onnx_model):
-    assert OnnxBackend(onnx_model, imgsz=320).imgsz == 640
+    assert OnnxBackend(onnx_model, imgsz=320, execution="cpu").imgsz == 640
 
 
-def test_onnx_reports_its_providers(onnx_model):
-    assert "CPUExecutionProvider" in OnnxBackend(onnx_model).providers
+def test_onnx_reports_the_provider_it_bound(onnx_model):
+    backend = OnnxBackend(onnx_model, execution="cpu")
+    assert backend.provider == "CPUExecutionProvider"
+    assert backend.on_npu is False
+    assert "CPUExecutionProvider" in backend.providers
 
 
 def test_onnx_missing_file():
     with pytest.raises(FileNotFoundError, match="ONNX model not found"):
-        OnnxBackend("nope.onnx")
+        OnnxBackend("nope.onnx", execution="cpu")
+
+
+def test_strict_npu_refuses_a_host_without_an_npu(onnx_model):
+    if available_npu_providers():
+        pytest.skip("this host has an NPU provider, so strict mode should succeed")
+    with pytest.raises(NpuUnavailable, match="requires an NPU execution provider"):
+        OnnxBackend(onnx_model, execution="npu")
+
+
+def test_npu_preferred_falls_back_to_cpu(onnx_model):
+    backend = OnnxBackend(onnx_model, execution="npu-preferred")
+    assert backend.provider in {
+        "CPUExecutionProvider",
+        *(s.name for s in available_npu_providers()),
+    }
+
+
+def test_dynamic_shapes_are_rejected_for_an_npu_provider():
+    with pytest.raises(ValueError, match="static input shape"):
+        _check_input_shape([1, 3, "height", "width"], "QNNExecutionProvider", "dynamic.onnx")
+
+
+def test_dynamic_shapes_are_fine_on_cpu():
+    _check_input_shape([1, 3, "height", "width"], "CPUExecutionProvider", "dynamic.onnx")
 
 
 def test_load_backend_builds_the_onnx_path(onnx_model):
-    backend = load_backend(RuntimeConfig(weights=onnx_model))
+    backend = load_backend(RuntimeConfig(weights=onnx_model, execution="cpu"))
     assert backend.name == "onnx"
     assert backend.infer(np.zeros((480, 640, 3), dtype=np.uint8))
+
+
+def test_auto_backend_never_picks_torch():
+    assert RuntimeConfig(weights=Path("best.pt")).backend_name == "onnx"

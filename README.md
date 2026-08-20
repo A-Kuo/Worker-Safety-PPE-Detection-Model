@@ -2,16 +2,25 @@
 
 Personal protective equipment detection for site cameras. A YOLOv8 detector on a
 unified 14-class schema, an association step that ties each piece of gear to the
-person wearing it, and an edge runtime that turns that into alerts you can act on.
-The same runtime backs a CLI, a FastAPI service, and a Streamlit review UI.
+person wearing it, and an alerting layer that debounces the result.
+
+Inference runs on an NPU through ONNX Runtime. That is the only deployment
+target: torch belongs to training and export, and a host that was asked for an
+accelerator and cannot provide one fails at startup rather than serving CPU
+frames and letting someone find out later.
 
 | | |
 |---|---|
 | Training schema | Combined PPE v4, remapped to 14 unified classes (`helmet`, `no_helmet`, and so on) |
 | Inherited baseline | Construction YOLOv8n, mAP50 0.809, mAP50-95 0.507 ([docs/baseline.md](docs/baseline.md)) |
-| Runtime | [docs/edge_runtime.md](docs/edge_runtime.md) |
+| NPU inference | [docs/npu_runtime.md](docs/npu_runtime.md) |
+| Pipeline internals | [docs/edge_runtime.md](docs/edge_runtime.md) |
 | Service and UI | [app/README.md](app/README.md) |
 | Credits | [ATTRIBUTION.md](ATTRIBUTION.md) |
+
+Accuracy is not where it needs to be yet. The Combined training runs are still
+pending, so treat every number below as the inherited baseline's, not this
+model's.
 
 ---
 
@@ -23,7 +32,7 @@ they have been missing it long enough to be worth an alert.
 
 The pipeline answers that in five steps:
 
-1. Run a detector over the frame (PyTorch on a workstation, ONNX Runtime on a device).
+1. Run the detector on the NPU through ONNX Runtime.
 2. Map whatever vocabulary the checkpoint uses onto one unified label set.
 3. Track people across frames so worker 3 stays worker 3.
 4. Attach each PPE box to a person and compare against the required gear.
@@ -32,7 +41,8 @@ The pipeline answers that in five steps:
 ```python
 from ppe import EdgePipeline, RuntimeConfig
 
-pipeline = EdgePipeline.from_config(RuntimeConfig(weights="models/best.onnx"))
+# execution="npu" is the default and raises if this host has no NPU provider.
+pipeline = EdgePipeline.from_config(RuntimeConfig(weights="models/best.int8.onnx"))
 for result in pipeline.process_stream(frames):
     for event in result.events:
         print(event.describe())  # worker 3 now no_helmet (4 frames, 0.5s)
@@ -43,22 +53,30 @@ for result in pipeline.process_stream(frames):
 ## 2. Install
 
 ```bash
-python -m pip install -e ".[edge]"        # numpy, opencv, onnxruntime: runs on a device
-python -m pip install -e ".[torch]"       # ultralytics + torch: training and .pt files
-python -m pip install -e ".[app]"         # FastAPI service and Streamlit UI
+python -m pip install -e ".[edge]"          # numpy, opencv, onnxruntime: the device install
+python -m pip install -e ".[app]"           # FastAPI service and Streamlit UI
+python -m pip install -e ".[torch]"         # ultralytics + torch: training and export only
 python -m pip install -e ".[edge,app,dev]"  # everything the test suite needs
 ```
 
-The core library depends on numpy and pyyaml only. Torch is an optional extra
-because a Jetson or an Intel NUC running the ONNX path does not need it.
+Then install the ONNX Runtime build for your accelerator and confirm it loaded:
+
+```bash
+python -m pip install onnxruntime-qnn      # or -openvino, -vitisai, -directml
+ppe devices
+```
+
+The core library depends on numpy and pyyaml. Torch is an optional extra that a
+device never installs.
 
 ---
 
 ## 3. Command line
 
 ```bash
+ppe devices                                     # which NPU providers this host has
 ppe classes                                     # print the 14-class schema
-ppe image site.jpg --weights models/best.onnx   # score a still or a directory
+ppe image site.jpg --weights models/best.int8.onnx
 ppe video clip.mp4 --save annotated.mp4         # score a clip, write an overlay
 ppe watch rtsp://cam.local/stream               # follow a live camera, print alerts
 ppe bench --frames 200 --json                   # latency and throughput
@@ -66,13 +84,15 @@ ppe serve --port 8000                           # start the HTTP service
 ```
 
 `python -m ppe` works the same way if you would rather not install the script.
-Every subcommand accepts `--backend {auto,ultralytics,onnx,stub}`, `--conf`,
-`--iou`, `--imgsz`, `--device`, `--required`, `--stride`, `--alert-frames`, and
-`--alert-cooldown`. Settings also come from `PPE_*` environment variables, and
-the command line wins over the environment.
+Every subcommand accepts `--execution {npu,npu-preferred,cpu}`, `--provider`,
+`--provider-option KEY=VALUE`, `--backend`, `--conf`, `--iou`, `--imgsz`,
+`--required`, `--stride`, `--alert-frames`, and `--alert-cooldown`. Settings
+also come from `PPE_*` environment variables, and the command line wins.
 
-The `stub` backend replays scripted detections instead of loading a model, which
-is how the test suite and a first deployment dry-run avoid needing weights.
+Two backends are not deployment targets. `stub` replays scripted detections so
+the test suite and a first deployment dry-run need no weights at all.
+`ultralytics` is a torch reference for diffing an export against its checkpoint,
+and needs `PPE_ALLOW_TORCH=1` on top of an explicit `--backend`.
 
 ---
 
@@ -120,6 +140,8 @@ Configs: [`configs/data/`](configs/data/). Counts: [`docs/data_distribution.md`]
   to people by containment or IoU and emits `Worker 3: missing helmet and vest`.
 - Tracking: [`src/ppe/tracking.py`](src/ppe/tracking.py), greedy IoU matching, no
   motion model. Enough for fixed cameras and nearly free on a low-power device.
+- Deployment format: static-shape ONNX, quantized to INT8. See
+  [docs/npu_runtime.md](docs/npu_runtime.md) for why an NPU needs both.
 
 External reference, not a checkpoint from here:
 [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection).
@@ -172,7 +194,9 @@ run of `python scripts/eval_baseline.py`.
 | `scripts/eval.py` | In-domain Combined eval |
 | `scripts/eval_cross_domain.py` | Combined, Construction (mapped), and HHU tables |
 | `scripts/calibrate.py` | ECE, Brier, and `no_*` confidence sweeps at recall 0.90 |
-| `scripts/benchmark.py`, `scripts/export_onnx.py` | Latency, FPS, memory, PyTorch against ONNX |
+| `scripts/export_onnx.py` | Static-shape ONNX export, verified after writing |
+| `scripts/quantize_onnx.py` | INT8 QDQ quantization against real calibration frames |
+| `scripts/benchmark.py` | Latency, FPS, memory |
 
 ---
 
@@ -184,12 +208,14 @@ ppe serve --port 8000                       # or: uvicorn app.api.main:app --rel
 streamlit run app/ui/streamlit_app.py       # second terminal
 ```
 
-OpenAPI at http://127.0.0.1:8000/docs. Endpoints: `GET /health`, `GET /metrics`,
-`GET /classes`, `POST /predict/image`, `POST /predict/video`, `GET /clips/{name}`,
-`GET /stream` (MJPEG). Details and curl examples in [app/README.md](app/README.md).
+OpenAPI at http://127.0.0.1:8000/docs. Endpoints: `GET /health`, `GET /devices`,
+`GET /metrics`, `GET /classes`, `POST /predict/image`, `POST /predict/video`,
+`GET /clips/{name}`, `GET /stream` (MJPEG). Details and curl examples in
+[app/README.md](app/README.md).
 
-Weights resolve from `PPE_WEIGHTS`, then
-`baselines/snehilsanyal_yolov8n_css/models/best.pt`, then `models/best.pt`.
+`/health` reports the execution policy, the provider actually bound, and which
+NPU providers the host has. Weights resolve from `PPE_WEIGHTS`, then
+`models/best.int8.onnx`, then `models/best.onnx`.
 
 ---
 
@@ -201,15 +227,24 @@ pytest
 ruff check . && ruff format --check .
 ```
 
-The suite runs without a checkpoint, a GPU, or a camera. It builds a synthetic
-ONNX graph to exercise the real ONNX Runtime path, generates video with OpenCV
-for the source and API tests, and drives everything else through the stub
-backend. CI runs the same three commands on Python 3.10 through 3.12.
+The suite runs without a checkpoint, a GPU, an NPU, or a camera. It builds a
+synthetic ONNX graph to exercise the real ONNX Runtime path, generates video
+with OpenCV for the source and API tests, and drives everything else through
+the stub backend. CI runs the same three commands on Python 3.10 through 3.12.
+
+No hosted runner has an NPU, so the vendor paths cannot be executed in CI. What
+is covered is the logic around them: provider resolution under each policy, the
+strict-mode failure and its message, static-shape validation, binding
+verification against a silent CPU fallback, and the torch gate. The vendor
+kernels themselves are only exercised on real hardware.
 
 ---
 
 ## 10. Future work
 
+- Raise accuracy: the Combined runs have not happened yet, and the numbers in
+  this README belong to the inherited baseline
+- Per-provider latency tables once the code runs on real Hexagon and XDNA parts
 - Appearance features in the tracker for crossing workers and long occlusions
 - SCADA and MES hooks so alerts reach plant alarms and shift dashboards
 - Infrared and thermal cameras for night shifts and low light
@@ -248,7 +283,7 @@ scripts/           dataset and training CLIs (see run_pipeline.md)
 configs/data/      construction, combined, hardhat_eval
 configs/train/     E0-E4 experiment yamls
 app/               FastAPI service and Streamlit UI
-docs/              baseline, experiments, data_distribution, edge_runtime
+docs/              npu_runtime, edge_runtime, baseline, experiments, data_distribution
 baselines/         inherited Construction artifacts
 tests/             the pytest suite
 ```
@@ -268,6 +303,7 @@ python scripts/analyze_distribution.py
 python scripts/train.py --exp e0_n
 python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e0_n/weights/best.pt
-python scripts/export_onnx.py --weights runs/train/e0_n/weights/best.pt
-python scripts/benchmark.py --weights runs/train/e0_n/weights/best.pt
+python scripts/export_onnx.py --weights runs/train/e0_n/weights/best.pt --imgsz 640
+python scripts/quantize_onnx.py --model models/best.onnx --calibration data/calib
+python scripts/benchmark.py --weights models/best.int8.onnx
 ```

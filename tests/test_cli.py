@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from ppe.cli import build_parser, config_from_args, main
+from ppe.providers import available_npu_providers
 from ppe.sources import open_writer
 
 cv2 = pytest.importorskip("cv2", reason="the image and video subcommands need opencv")
@@ -148,3 +149,74 @@ def test_config_from_args_parses_required_ppe():
 def test_unknown_subcommand_exits_with_usage():
     with pytest.raises(SystemExit):
         build_parser().parse_args(["teleport"])
+
+
+def test_devices_lists_every_registry_entry(capsys):
+    code, out = run(["devices"], capsys)
+    assert "QNNExecutionProvider" in out
+    assert "CANNExecutionProvider" in out
+    assert "onnxruntime" in out
+    # Exit 1 on a host with no NPU, so CI and deploy scripts can gate on it.
+    assert code == (0 if available_npu_providers() else 1)
+
+
+def test_devices_json_names_what_is_available(capsys):
+    _code, out = run(["devices", "--json"], capsys)
+    env = json.loads(out)
+    assert env["installed_providers"]
+    assert env["npu_available"] == [s.name for s in available_npu_providers()]
+    assert any(row["vendor"] == "Qualcomm" for row in env["providers"])
+
+
+def test_devices_prints_install_hints_for_missing_providers(capsys):
+    if available_npu_providers():
+        pytest.skip("this host has an NPU provider")
+    _code, out = run(["devices"], capsys)
+    assert "onnxruntime-qnn" in out
+    assert "--execution cpu" in out
+
+
+def test_execution_defaults_to_strict_npu():
+    args = build_parser().parse_args(["image", "x.jpg"])
+    assert config_from_args(args).execution == "npu"
+
+
+def test_execution_flag_overrides_the_default():
+    args = build_parser().parse_args(["image", "x.jpg", "--execution", "cpu"])
+    assert config_from_args(args).execution == "cpu"
+
+
+def test_provider_can_be_pinned():
+    args = build_parser().parse_args(["image", "x.jpg", "--provider", "OpenVINOExecutionProvider"])
+    assert config_from_args(args).provider == "OpenVINOExecutionProvider"
+
+
+def test_provider_options_are_repeatable():
+    args = build_parser().parse_args(
+        [
+            "image",
+            "x.jpg",
+            "--provider-option",
+            "device_type=NPU",
+            "--provider-option",
+            "precision=FP16",
+        ]
+    )
+    options = config_from_args(args).provider_options
+    assert options == {"device_type": "NPU", "precision": "FP16"}
+
+
+def test_malformed_provider_option_is_an_error():
+    args = build_parser().parse_args(["image", "x.jpg", "--provider-option", "device_type"])
+    with pytest.raises(ValueError, match="KEY=VALUE"):
+        config_from_args(args)
+
+
+def test_strict_npu_on_a_cpu_host_reports_the_reason(still, capsys):
+    if available_npu_providers():
+        pytest.skip("this host has an NPU provider")
+    code = main(["image", str(still), "--weights", str(still), "--execution", "npu"])
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "requires an NPU execution provider" in err
+    assert "--execution cpu" in err

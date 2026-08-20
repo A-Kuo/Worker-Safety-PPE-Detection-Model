@@ -44,6 +44,7 @@ ensure_src_on_path()
 
 from ppe import __version__  # noqa: E402
 from ppe.draw import annotate  # noqa: E402
+from ppe.providers import describe_environment  # noqa: E402
 from ppe.schema import UNIFIED_CLASS_NAMES  # noqa: E402
 from ppe.sources import (  # noqa: E402
     SourceUnavailable,
@@ -77,6 +78,9 @@ class HealthOut(BaseModel):
     weights: str
     weights_exists: bool
     backend: str
+    execution: str
+    provider: str | None = None
+    npu_available: list[str] = Field(default_factory=list)
     device: str | None = None
     detail: str | None = None
 
@@ -138,9 +142,18 @@ def health() -> HealthOut:
         weights=str(status.weights),
         weights_exists=status.weights_exist,
         backend=status.backend,
+        execution=status.execution,
+        provider=status.provider,
+        npu_available=status.npu_available,
         device=status.device,
         detail=status.detail,
     )
+
+
+@app.get("/devices", tags=["meta"])
+def devices() -> dict[str, Any]:
+    """Which execution providers this host can bind, and which are NPUs."""
+    return describe_environment()
 
 
 @app.get("/classes", tags=["meta"])

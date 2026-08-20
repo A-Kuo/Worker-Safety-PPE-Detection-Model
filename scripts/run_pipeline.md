@@ -30,9 +30,12 @@ python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
 python scripts/eval_cross_domain.py --weights runs/train/e4_full44k/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e4_full44k/weights/best.pt
 
-# 7) Export + latency
-python scripts/export_onnx.py --weights runs/train/e4_full44k/weights/best.pt
-python scripts/benchmark.py --weights runs/train/e4_full44k/weights/best.pt
+# 7) Export for the NPU, quantize, then measure
+python scripts/export_onnx.py --weights runs/train/e4_full44k/weights/best.pt --imgsz 640 \
+    --out models/best.onnx
+python scripts/quantize_onnx.py --model models/best.onnx --calibration data/calib
+ppe devices
+ppe bench --weights models/best.int8.onnx --json
 
 # 8) Service and UI (second terminal for the UI)
 ppe serve --port 8000
@@ -45,4 +48,4 @@ Auditing the inherited Construction baseline needs no Combined download, only th
 python scripts/eval_baseline.py
 ```
 
-Docs: [baseline](../docs/baseline.md), [experiments](../docs/experiments.md), [data distribution](../docs/data_distribution.md), [edge runtime](../docs/edge_runtime.md), [service and UI](../app/README.md).
+Docs: [NPU runtime](../docs/npu_runtime.md), [baseline](../docs/baseline.md), [experiments](../docs/experiments.md), [data distribution](../docs/data_distribution.md), [edge runtime](../docs/edge_runtime.md), [service and UI](../app/README.md).

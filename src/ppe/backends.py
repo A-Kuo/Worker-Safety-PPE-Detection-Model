@@ -1,22 +1,25 @@
 """Detector backends.
 
-Three implementations share one interface so the rest of the pipeline does not
-care what is behind it:
+Inference runs on ONNX Runtime against an NPU. That is the only path the
+runtime selects on its own, and ``auto`` always resolves to it.
 
-``ultralytics``
-    The PyTorch path. Convenient on a workstation, heavy on a device.
 ``onnx``
-    ONNX Runtime plus the numpy postprocessing in :mod:`ppe.postprocess`. This
-    is the path meant for edge hardware, where torch is usually not installed.
+    The deployment path. ONNX Runtime bound to an NPU execution provider, with
+    the numpy postprocessing in :mod:`ppe.postprocess`. No torch anywhere.
 ``stub``
     Replays scripted detections. Used by the tests and by ``--backend stub``
     for wiring up a deployment before any weights exist.
+``ultralytics``
+    A torch reference implementation, kept for diffing the ONNX path against
+    on a workstation. Opt-in twice: pick it explicitly *and* set
+    ``PPE_ALLOW_TORCH=1``. It is not a deployment target.
 """
 
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterable, Sequence
+import os
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -24,7 +27,16 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from ppe.postprocess import decode_yolo_output, letterbox, to_input_tensor, undo_letterbox
+from ppe.providers import (
+    CPU_PROVIDER,
+    dynamic_axes,
+    requires_static_shapes,
+    resolve,
+    verify_binding,
+)
 from ppe.schema import UNIFIED_CLASS_NAMES
+
+TORCH_OPT_IN = "PPE_ALLOW_TORCH"
 
 
 @dataclass(frozen=True)
@@ -51,7 +63,12 @@ class DetectorBackend(Protocol):
 
 
 class UltralyticsBackend:
-    """YOLO checkpoint loaded through the ultralytics package."""
+    """Torch reference implementation. Not a deployment target.
+
+    Kept so an ONNX export can be diffed against the checkpoint it came from.
+    Constructing it requires ``PPE_ALLOW_TORCH=1`` so it cannot be reached by
+    accident from a device profile.
+    """
 
     name = "ultralytics"
 
@@ -63,12 +80,13 @@ class UltralyticsBackend:
         imgsz: int = 640,
         device: str | None = None,
     ) -> None:
+        require_torch_opt_in()
         try:
             from ultralytics import YOLO
         except ImportError as exc:
             raise ImportError(
-                "The ultralytics backend needs `pip install ultralytics`. "
-                "Export to ONNX and use --backend onnx for a torch-free device."
+                "The ultralytics backend needs `pip install -e '.[torch]'`. "
+                "Deployments export to ONNX and run on an NPU instead."
             ) from exc
         self.weights = str(weights)
         self.conf = float(conf)
@@ -104,7 +122,12 @@ class UltralyticsBackend:
 
 
 class OnnxBackend:
-    """ONNX Runtime session with numpy letterboxing, decode, and NMS."""
+    """ONNX Runtime bound to an NPU, with numpy letterboxing, decode, and NMS.
+
+    The session is built from a provider policy rather than a raw provider
+    list, so a host without the requested accelerator raises at construction
+    instead of quietly serving CPU inference.
+    """
 
     name = "onnx"
 
@@ -115,12 +138,11 @@ class OnnxBackend:
         iou: float = 0.45,
         imgsz: int = 640,
         max_detections: int = 300,
-        providers: Sequence[str] | None = None,
+        execution: str = "npu",
+        provider: str | None = None,
+        provider_options: Mapping[str, str] | None = None,
     ) -> None:
-        try:
-            import onnxruntime
-        except ImportError as exc:
-            raise ImportError("The onnx backend needs `pip install onnxruntime`.") from exc
+        onnxruntime = _onnxruntime()
 
         path = Path(weights)
         if not path.is_file():
@@ -130,17 +152,28 @@ class OnnxBackend:
         self.conf = float(conf)
         self.iou = float(iou)
         self.max_detections = int(max_detections)
+        self.execution = execution
+
+        requested = resolve(execution, provider, provider_options)
         self._session = onnxruntime.InferenceSession(
             self.weights,
-            providers=list(providers) if providers else onnxruntime.get_available_providers(),
+            providers=[name for name, _opts in requested],
+            provider_options=[opts for _name, opts in requested],
         )
+        self.provider = verify_binding(self._session, requested, execution)
+
         self._input = self._session.get_inputs()[0]
+        _check_input_shape(self._input.shape, self.provider, self.weights)
         self.imgsz = _input_size(self._input.shape, imgsz)
         self._names = _names_from_metadata(self._session)
 
     @property
     def providers(self) -> list[str]:
         return list(self._session.get_providers())
+
+    @property
+    def on_npu(self) -> bool:
+        return self.provider != CPU_PROVIDER
 
     def class_names(self) -> dict[int, str]:
         return dict(self._names)
@@ -207,6 +240,9 @@ def load_backend(config) -> DetectorBackend:
             iou=config.iou,
             imgsz=config.imgsz,
             max_detections=config.max_detections,
+            execution=config.execution,
+            provider=config.provider,
+            provider_options=config.provider_options,
         )
     if kind == "ultralytics":
         return UltralyticsBackend(
@@ -216,7 +252,54 @@ def load_backend(config) -> DetectorBackend:
             imgsz=config.imgsz,
             device=config.device,
         )
-    raise ValueError(f"Unknown backend {kind!r}; expected ultralytics, onnx, or stub.")
+    raise ValueError(f"Unknown backend {kind!r}; expected onnx, stub, or ultralytics.")
+
+
+def torch_opted_in() -> bool:
+    return os.environ.get(TORCH_OPT_IN, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def require_torch_opt_in() -> None:
+    """Refuse the torch path unless someone deliberately turned it on.
+
+    Inference targets an NPU through ONNX Runtime. The torch backend exists to
+    check an export against its source checkpoint, which is a workstation task,
+    so reaching it takes an explicit environment variable as well as an
+    explicit backend choice.
+    """
+    if not torch_opted_in():
+        raise RuntimeError(
+            "The ultralytics backend is a torch reference path, not a deployment target. "
+            f"Set {TORCH_OPT_IN}=1 to use it, or export to ONNX and run on an NPU:\n"
+            "  python scripts/export_onnx.py --weights best.pt --imgsz 640\n"
+            "  python scripts/quantize_onnx.py --model best.onnx --calibration data/calib\n"
+            "  ppe image frame.jpg --weights best.int8.onnx"
+        )
+
+
+def _check_input_shape(shape: Sequence[object], provider: str, weights: str) -> None:
+    """Reject dynamic input shapes on accelerators that cannot compile them."""
+    if not requires_static_shapes(provider):
+        return
+    dynamic = dynamic_axes(shape)
+    if not dynamic:
+        return
+    raise ValueError(
+        f"{provider} needs a static input shape, but {weights} declares {shape} "
+        f"with dynamic axes at {dynamic}. Re-export with fixed dimensions:\n"
+        "  python scripts/export_onnx.py --weights best.pt --imgsz 640"
+    )
+
+
+def _onnxruntime():
+    try:
+        import onnxruntime
+    except ImportError as exc:
+        raise ImportError(
+            "The onnx backend needs ONNX Runtime. Install the build for your accelerator "
+            "(see `ppe devices`), or `pip install onnxruntime` for CPU-only development."
+        ) from exc
+    return onnxruntime
 
 
 def _pack(boxes, confs, classes, names: dict[int, str]) -> list[RawDetection]:
