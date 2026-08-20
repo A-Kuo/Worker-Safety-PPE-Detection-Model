@@ -29,11 +29,16 @@ Core library: [`src/ppe/`](src/ppe/) (`schema`, `compliance`, `inference`). Pref
 
 Missed PPE on site is a leading industrial safety failure mode. OSHA and similar regimes emphasize hard hats, high-visibility vests, eye/face protection, and related gear. Computer vision can flag **missing** equipment (`no_helmet`, `no_vest`, …) in camera feeds—similar in spirit to Matroid-style visual inspection—without replacing human judgment.
 
-This project focuses on:
+**Detection bars for this cycle (not a single global accuracy):**
 
-- A **shared label schema** across datasets so metrics are comparable.
-- **Recall-first** operating points on violation classes (`no_*`).
-- An honest split between **inherited artifacts** and **original engineering**.
+| Priority | Class | Target |
+|---|---|---|
+| 1 | Hi-vis **vest** / `no_vest` | **95%+** precision and recall |
+| 2 | **Hard hat** / `no_helmet` | Next; stretch high 80s–90s |
+| 3 | **Goggles** | **~70% acceptable** (clear lenses vs everyday glasses) |
+| Later | Steel-toe boots | Future dataset only — Combined has no boot class |
+
+This project also uses a **shared label schema**, **recall-first** thresholds on `no_*` (especially missing vests), and an honest split between inherited artifacts and original engineering.
 
 ---
 
@@ -59,7 +64,7 @@ This project focuses on:
 | Person / Safety Cone | `person` / `cone` |
 | Ladder / Fall-Detected | `ladder` / `fall_detected` |
 
-Construction-only `machinery` / `vehicle` stay on the Construction baseline; they are **not** in the unified model. **Boots are out of scope** (Combined has no `boots` / `no_boots`).
+Construction-only `machinery` / `vehicle` stay on the Construction baseline; they are **not** in the unified model. **Boots are future work** (Combined has no `boots` / `no_boots`); do not invent the class this cycle.
 
 **No Construction ↔ Combined merge.** Construction already clones imagery from Combined and other Universe sets; merging without perceptual hashing would leak train/eval. Protocol: remap separately; evaluate Construction on mapped shared classes only.
 
@@ -98,7 +103,9 @@ Scripts and YAML drive training; nothing is claimed as a finished Combined run u
 | E3 | Stronger augs (blur, brightness, crop) | Same subset |
 | E4 | YOLOv8n **50e** on full **44k** | Confirmation / shipped detector |
 
-**Metrics pending** until `ROBOFLOW_API_KEY` downloads succeed and GPU training runs finish. Do not compare Combined 14-class mAP to Construction 10-class mAP as a like-for-like win; use `SHARED_EVAL_CLASSES` for fair slices.
+**Where to train:** **Colab or Kaggle** for E0–E4. Local **8GB** GPU is for baseline val, export, demo, and optional `--batch 8` smokes only. See [`docs/compute.md`](docs/compute.md) and [`notebooks/train_colab_kaggle.ipynb`](notebooks/train_colab_kaggle.ipynb).
+
+**Metrics pending** until Combined downloads finish and a Colab/Kaggle job completes. Do not compare Combined 14-class mAP to Construction 10-class mAP as a like-for-like win; use `SHARED_EVAL_CLASSES` for fair slices. Lead reporting with **vest / no_vest**.
 
 ---
 
@@ -161,6 +168,7 @@ Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a l
 
 ## 9. Future Work
 
+- **Steel-toe boots / `no_boots`** — needs a separate labeled set; not in Combined
 - Multi-object **tracking** (ByteTrack / BoT-SORT) for stable worker IDs across frames
 - **SCADA / MES** hooks for plant alarms and shift dashboards
 - **IR / thermal** cameras for low-light and outdoor night shifts

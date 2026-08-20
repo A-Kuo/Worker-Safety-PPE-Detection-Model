@@ -43,6 +43,24 @@ KNOWN_EPOCH99 = {
 NO_STAR_CLASSES = ("no_helmet", "no_vest", "no_goggles", "no_gloves", "no_mask")
 
 
+def load_dotenv(path: Path | None = None) -> None:
+    """Load KEY=VALUE lines from ``.env`` into ``os.environ`` if unset."""
+    import os
+
+    env_path = path or (REPO_ROOT / ".env")
+    if not env_path.is_file():
+        return
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def ensure_repo_on_path() -> None:
     """Put repo root and ``src/`` on ``sys.path`` (src-layout ``ppe`` package)."""
     for path in (REPO_ROOT, REPO_ROOT / "src"):

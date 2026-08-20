@@ -34,6 +34,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--model", default=None, help="Override model weights / yaml")
     parser.add_argument("--data", default=None, help="Override data yaml")
     parser.add_argument("--epochs", type=int, default=None)
+    parser.add_argument(
+        "--batch",
+        type=int,
+        default=None,
+        help="Override batch. Use 8 on 8GB local GPUs; 16–32 on Colab/Kaggle P100.",
+    )
     parser.add_argument("--device", default=None)
     parser.add_argument("--project", default=None)
     parser.add_argument("--name", default=None)
@@ -81,6 +87,8 @@ def apply_overrides(cfg: dict[str, Any], args: argparse.Namespace) -> tuple[str,
         cfg["data"] = args.data
     if args.epochs is not None:
         cfg["epochs"] = args.epochs
+    if args.batch is not None:
+        cfg["batch"] = args.batch
     if args.device is not None:
         cfg["device"] = args.device
     if args.project:

@@ -1,5 +1,6 @@
 # Raw / downloaded datasets — do not commit 44k images
 data/raw/
+data/processed/
 data/combined/
 data/hardhat/
 data/construction/
@@ -18,6 +19,11 @@ build/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Secrets — never commit API keys
+.env
+.env.*
+!.env.example
 
 # Virtualenvs
 .venv/

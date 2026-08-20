@@ -1,6 +1,6 @@
 # End-to-end pipeline commands
 
-Run from the **repository root**. Downloads need `ROBOFLOW_API_KEY`. Training/eval expect a GPU for practical runtimes. Do not commit raw images or experiment weights.
+Run from the **repository root**. Downloads need `ROBOFLOW_API_KEY`. **Train E0–E4 on Colab or Kaggle** ([docs/compute.md](../docs/compute.md)). Local 8GB is for remap, baseline val, demo, and `--batch 8` smokes. Do not commit raw images or experiment weights. Boots are out of this cycle.
 
 ```bash
 # 0) Env
@@ -22,9 +22,10 @@ python scripts/make_subset.py --source data/raw/combined --out data/raw/combined
 # 4) Distribution analysis (before training)
 python scripts/analyze_distribution.py
 
-# 5) Train grid entry (E0); swap --exp for e1_s / e2_focal / e3_augs / e4_full44k
+# 5) Train on Colab/Kaggle (see notebooks/train_colab_kaggle.ipynb).
+# Local 8GB smoke only:
 python scripts/train.py --exp e0_n --dry-run
-python scripts/train.py --exp e0_n
+python scripts/train.py --exp e0_n --batch 8 --device 0
 
 # 6) Eval + calibration (point --weights at your run)
 python scripts/eval.py --weights runs/train/e0_n/weights/best.pt

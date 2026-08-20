@@ -4,7 +4,11 @@ Fixed data, split, and seed. Change **one** factor at a time on the stratified C
 
 Do **not** compare Combined 14-class mAP to the inherited Construction 10-class baseline (mAP50 = 0.809). Compare only on `SHARED_EVAL_CLASSES` (helmet / vest / mask / person / cone and their `no_*` partners).
 
-Safety-critical classes for false-negative analysis: `no_helmet`, `no_vest`, `no_goggles`, `no_mask`.
+**Primary product metric:** `vest` / `no_vest` at **95%+** P and R. Helmets next. Goggles ~70% is acceptable. Boots are future work.
+
+Safety-critical classes for false-negative analysis: `no_vest` first, then `no_helmet`, `no_goggles`, `no_mask`.
+
+**Compute:** Colab or Kaggle for the grid; local 8GB GPU only for light jobs ([docs/compute.md](compute.md)).
 
 ## Protocol
 

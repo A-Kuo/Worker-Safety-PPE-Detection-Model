@@ -5,7 +5,7 @@ data: configs/data/combined.yaml
 subset_size: 12000
 epochs: 100
 imgsz: 640
-batch: 16
+batch: 16  # Colab/Kaggle P100. Local 8GB: scripts/train.py --batch 8
 seed: 42
 cos_lr: true
 patience: 20

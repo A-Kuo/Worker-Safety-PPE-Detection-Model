@@ -5,7 +5,7 @@ data: configs/data/combined.yaml
 subset_size: null
 epochs: 50
 imgsz: 640
-batch: 16
+batch: 16  # Colab/Kaggle only. Do not run E4 on 8GB local.
 seed: 42
 cos_lr: true
 patience: 15

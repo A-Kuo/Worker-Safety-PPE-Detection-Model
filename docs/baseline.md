@@ -33,22 +33,30 @@ Best logged mAP50 is epoch 87 (0.80917). Best mAP50-95 is epoch 99 (0.50710).
 
 - Weights: `C:/GitHub/Worker Safety PPE Detection Model/baselines/snehilsanyal_yolov8n_css/models/best.pt`
 - Training log: `C:/GitHub/Worker Safety PPE Detection Model/baselines/snehilsanyal_yolov8n_css/results/results.csv`
-- Construction yaml: `C:/GitHub/Worker Safety PPE Detection Model/configs/data/construction.yaml`
-- Image root: `not found` (0 images discovered)
+- Construction yaml: `C:/GitHub/Worker Safety PPE Detection Model/data/raw/construction/data.yaml`
+- Image root: `C:/GitHub/Worker Safety PPE Detection Model/data/raw/construction` (2801 images discovered)
 
 ## Ultralytics val (per-class)
 
-Per-class P / R / F1 / mAP **require a val pass** with Construction images on disk.
-Images were not available in this checkout (`data/raw/construction` and the original `train`/`valid`/`test` folders are empty or missing).
+Fresh `model.val()` on the Construction split:
 
-The inherited `results.csv` only stores **global** box metrics, so class-wise numbers cannot be recovered from the CSV alone.
-Re-run:
+- Precision = 0.916
+- Recall = 0.727
+- mAP50 = 0.801
+- mAP50-95 = 0.499
 
-```bash
-python scripts/eval_baseline.py
-```
-
-after placing Construction v28 images (or setting `--data` / `--weights`).
+| class | P | R | F1 | mAP50 | mAP50-95 |
+| --- | --- | --- | --- | --- | --- |
+| Hardhat | 0.921 | 0.736 | 0.818 | 0.841 | 0.549 |
+| Mask | 0.967 | 0.905 | 0.935 | 0.917 | 0.657 |
+| NO-Hardhat | 0.918 | 0.565 | 0.700 | 0.713 | 0.395 |
+| NO-Mask | 0.890 | 0.581 | 0.703 | 0.635 | 0.330 |
+| NO-Safety Vest | 0.915 | 0.651 | 0.761 | 0.771 | 0.438 |
+| Person | 0.897 | 0.738 | 0.810 | 0.826 | 0.506 |
+| Safety Cone | 0.892 | 0.864 | 0.878 | 0.870 | 0.515 |
+| Safety Vest | 0.923 | 0.780 | 0.846 | 0.906 | 0.601 |
+| machinery | 0.955 | 0.927 | 0.941 | 0.936 | 0.648 |
+| vehicle | 0.879 | 0.521 | 0.654 | 0.597 | 0.349 |
 
 ## Confusion-matrix interpretation (inherited plot)
 
