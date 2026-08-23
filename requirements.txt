@@ -1,8 +1,12 @@
 ultralytics>=8.1.0
 numpy
-opencv-python
+opencv-python-headless
 pyyaml
 torch
 pytest
 roboflow
 requests
+# Edge / NPU path (also: pip install -e ".[edge]")
+onnxruntime>=1.16.0
+onnx>=1.15.0
+onnxconverter-common>=1.14.0

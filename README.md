@@ -68,7 +68,7 @@ Construction-only `machinery` / `vehicle` stay on the Construction baseline; the
 
 **No Construction ↔ Combined merge.** Construction already clones imagery from Combined and other Universe sets; merging without perceptual hashing would leak train/eval. Protocol: remap separately; evaluate Construction on mapped shared classes only.
 
-Configs: [`configs/data/`](configs/data/). Distribution notes: [`docs/data_distribution.md`](docs/data_distribution.md).
+Configs: [`configs/data/`](configs/data/). Compute notes: [`docs/compute.md`](docs/compute.md).
 
 ---
 
@@ -131,20 +131,21 @@ Per-class Ultralytics val needs Construction images on disk (`python scripts/eva
 | `scripts/eval.py` | In-domain Combined eval |
 | `scripts/eval_cross_domain.py` | Combined / Construction (mapped) / HHU tables |
 | `scripts/calibrate.py` | ECE, Brier, `no_*` confidence sweeps (target R ≥ 0.90) |
-| `scripts/benchmark.py` + `export_onnx.py` | Latency / FPS / memory (PyTorch vs ONNX) |
+| `scripts/benchmark.py` + `export_onnx.py` / `quantize_onnx.py` | Latency / FPS; ONNX + INT8 edge path |
+| `ppe` CLI (`providers` / `export` / `quantize` / `bench` / `predict`) | Vendor-agnostic ORT EP registry — [docs/edge_npu.md](docs/edge_npu.md) |
 
 ---
 
 ## 7. Deployment
 
-Local demo only — see **[app/README.md](app/README.md)** for weights env vars and endpoints.
+Local demo only — see **[app/README.md](app/README.md)** for weights env vars and endpoints. Edge / NPU (ONNX-first): **[docs/edge_npu.md](docs/edge_npu.md)**.
 
 ```bash
 # From repo root
 python -m pip install -r requirements.txt
 python -m pip install -r app/requirements.txt
-# Optional editable install for `from ppe...`:
-python -m pip install -e .
+# Optional editable install for `from ppe...` and the `ppe` CLI:
+python -m pip install -e ".[edge]"
 
 # API
 uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
@@ -172,7 +173,7 @@ Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a l
 - Multi-object **tracking** (ByteTrack / BoT-SORT) for stable worker IDs across frames
 - **SCADA / MES** hooks for plant alarms and shift dashboards
 - **IR / thermal** cameras for low-light and outdoor night shifts
-- Optional YOLOv8m (E5) and INT8 quantization appendix after E4 latency numbers exist
+- Optional YOLOv8m (E5); re-check INT8 accuracy on real NPU hardware after E4
 
 ---
 
@@ -184,6 +185,7 @@ Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a l
 | Original Roboflow Construction notes / yaml layout | `scripts/` download → remap → subset → analyze → train → eval → calibrate → export → benchmark |
 | Artifact dump moved under `baselines/snehilsanyal_yolov8n_css/` | `configs/data`, `configs/train`, docs, tests |
 | | FastAPI + Streamlit demo under `app/` |
+| | Edge runtime (`src/ppe/runtime/`), `ppe` CLI, ONNX INT8 quantize |
 | | Honest attribution and portfolio README |
 
 **Do not** present `baselines/.../models/best.pt` as a model trained here.
@@ -201,14 +203,15 @@ Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
 ## Repo map
 
 ```text
-src/ppe/           # schema, compliance, inference
+src/ppe/           # schema, compliance, inference, runtime (ORT EPs), cli
 scripts/           # pipeline CLIs (+ run_pipeline.md)
 configs/data/      # construction, combined, hardhat_eval
 configs/train/     # E0–E4 experiment YAMLs
 app/               # FastAPI + Streamlit
-docs/              # baseline, experiments, data_distribution
+docs/              # baseline, experiments, compute, edge_npu
+models/            # exported ONNX / INT8 (binaries gitignored)
 baselines/         # inherited Snehil Construction artifacts
-tests/             # schema + compliance unit tests
+tests/             # schema, compliance, runtime unit tests
 ```
 
 ### End-to-end command sequence
@@ -226,8 +229,11 @@ python scripts/analyze_distribution.py
 python scripts/train.py --exp e0_n
 python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e0_n/weights/best.pt
-python scripts/export_onnx.py --weights runs/train/e0_n/weights/best.pt
-python scripts/benchmark.py --weights runs/train/e0_n/weights/best.pt
+# Edge path until Combined E4 exists — use inherited Construction weights:
+python scripts/export_onnx.py --weights baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
+python scripts/quantize_onnx.py --model models/best.onnx
+ppe providers
+ppe bench --weights models/best.onnx
 # Then launch app/ (see §7)
 ```
 
@@ -236,4 +242,5 @@ python scripts/benchmark.py --weights runs/train/e0_n/weights/best.pt
 ```bash
 python -c "from ppe.schema import UNIFIED_CLASS_NAMES; print(len(UNIFIED_CLASS_NAMES))"  # → 14
 pytest tests/
+python -m ppe.cli providers
 ```

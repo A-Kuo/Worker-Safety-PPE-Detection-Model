@@ -5,7 +5,7 @@ Run from the **repository root**. Downloads need `ROBOFLOW_API_KEY`. **Train E0â
 ```bash
 # 0) Env
 python -m pip install -r requirements.txt
-python -m pip install -e .   # enables `from ppe...`
+python -m pip install -e ".[edge]"   # enables `from ppe...` and `ppe` CLI
 
 # 1) Download (omit --execute for dry-run)
 python scripts/download_datasets.py --dry-run
@@ -32,8 +32,13 @@ python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
 python scripts/eval_cross_domain.py --weights runs/train/e4_full44k/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e4_full44k/weights/best.pt
 
-# 7) Export + latency
-python scripts/export_onnx.py --weights runs/train/e4_full44k/weights/best.pt
+# 7) Export + INT8 + edge bench (PowerShell: do not use <angle brackets> in paths)
+# Until E4 exists, swap weights for baselines/snehilsanyal_yolov8n_css/models/best.pt
+python scripts/export_onnx.py --weights runs/train/e4_full44k/weights/best.pt --out models/best.onnx
+python scripts/quantize_onnx.py --model models/best.onnx
+ppe providers
+ppe bench --weights models/best.onnx
+ppe bench --weights models/best.int8.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg
 python scripts/benchmark.py --weights runs/train/e4_full44k/weights/best.pt
 
 # 8) Demo (second terminal for UI)
@@ -48,4 +53,4 @@ Inherited Construction baseline audit (no Combined download required if weights 
 python scripts/eval_baseline.py
 ```
 
-Docs: [docs/baseline.md](../docs/baseline.md), [docs/experiments.md](../docs/experiments.md), [docs/data_distribution.md](../docs/data_distribution.md), [app/README.md](../app/README.md).
+Docs: [docs/baseline.md](../docs/baseline.md), [docs/experiments.md](../docs/experiments.md), [docs/compute.md](../docs/compute.md), [docs/edge_npu.md](../docs/edge_npu.md), [app/README.md](../app/README.md).
