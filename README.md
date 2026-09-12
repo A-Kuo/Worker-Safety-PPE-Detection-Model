@@ -79,7 +79,7 @@ Configs: [`configs/data/`](configs/data/). Compute notes: [`docs/compute.md`](do
 - **Compliance layer:** `src/ppe/compliance.py` associates PPE boxes to `person` via containment / IoU and emits strings like `Worker k — missing helmet, vest`.
 - **Optional VLM:** not implemented this cycle (see §8).
 
-External reference only (not our checkpoint): [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m on Combined v4).
+**Fine-tuning base checkpoint:** [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m on Combined v4, CC BY 4.0) was vetted and adopted as the base for gap fine-tuning on vest/no_vest reliability — see `ATTRIBUTION.md`, `configs/models/registry.yaml`, and `docs/baseline_hf.md` for its raw (pre-fine-tune) numbers. Fetched and pinned via `scripts/fetch_checkpoint.py`; its class order was then corrected to match this repo's unified schema via `scripts/reorder_checkpoint_classes.py` (verified via `scripts/verify_reorder.py`) — use `models/pretrained/hexmon_vyra/best_unified_order.pt`, not the raw fetch.
 
 ---
 
@@ -179,13 +179,15 @@ Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a l
 
 ## 10. What I inherited vs what I built
 
-| Inherited (third-party) | Built in this repo |
+| Inherited / adopted (third-party) | Built in this repo |
 |---|---|
 | Snehil Sanyal Construction YOLOv8n weights, plots, `results.csv`, sample media | `src/ppe/` schema, compliance, inference |
 | Original Roboflow Construction notes / yaml layout | `scripts/` download → remap → subset → analyze → train → eval → calibrate → export → benchmark |
 | Artifact dump moved under `baselines/snehilsanyal_yolov8n_css/` | `configs/data`, `configs/train`, docs, tests |
+| Hexmon/vyra-yolo-ppe-detection checkpoint (fetched, pinned, not fine-tuned as-is) | Checkpoint fetch/provenance tooling (`scripts/fetch_checkpoint.py`, `configs/models/registry.yaml`, `models/pretrained/manifest.json`), class-order correction (`scripts/reorder_checkpoint_classes.py`, `scripts/verify_reorder.py`) |
+| novest/no-vest-detect v1 (Roboflow Universe, gap-fill vest/no_vest data) | Gap fine-tuning pipeline (`scripts/finetune.py`, `configs/finetune/`) and the raw-vs-fine-tuned-vs-from-scratch comparison analysis |
 | | FastAPI + Streamlit demo under `app/` |
-| | Edge runtime (`src/ppe/runtime/`), `ppe` CLI, ONNX INT8 quantize |
+| | Edge runtime (`src/ppe/runtime/`), `ppe` CLI, ONNX INT8 quantize, Intel NPU/OpenVINO device targeting |
 | | Honest attribution and portfolio README |
 
 **Do not** present `baselines/.../models/best.pt` as a model trained here.
@@ -194,7 +196,7 @@ Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a l
 
 - **Snehil Sanyal** — [Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection)
 - **Roboflow Universe** datasets above — **CC BY 4.0**
-- **Hexmon/vyra-yolo-ppe-detection** — external Combined v4 reference only
+- **Hexmon/vyra-yolo-ppe-detection** — adopted fine-tuning base checkpoint (Combined v4, CC BY 4.0)
 
 Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
 

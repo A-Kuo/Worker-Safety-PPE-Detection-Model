@@ -51,7 +51,7 @@ def cmd_export(args: argparse.Namespace) -> int:
         argv += ["--weights", str(args.weights)]
     if args.out:
         argv += ["--out", str(args.out)]
-    argv += ["--imgsz", str(args.imgsz)]
+    argv += ["--imgsz", str(args.imgsz), "--format", args.format, "--opset", str(args.opset)]
     if args.dynamic:
         argv.append("--dynamic")
     old = sys.argv
@@ -97,6 +97,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
         allow_torch=args.allow_torch,
         imgsz=args.imgsz,
         conf=args.conf,
+        openvino_device_type=args.openvino_device or None,
     )
     session = open_session(args.weights, policy=policy, repo_root=root)
     print(json.dumps(session.info(), indent=2, default=str))
@@ -180,6 +181,7 @@ def cmd_predict(args: argparse.Namespace) -> int:
         allow_torch=args.allow_torch,
         imgsz=args.imgsz,
         conf=args.conf,
+        openvino_device_type=args.openvino_device or None,
     )
     session = open_session(args.weights, policy=policy, repo_root=root)
     src = Path(args.source)
@@ -215,6 +217,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", type=Path, default=Path("models/best.onnx"))
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--dynamic", action="store_true", help="Allow dynamic axes (worse for many NPUs)")
+    p.add_argument("--format", choices=("onnx", "openvino"), default="onnx")
+    p.add_argument("--opset", type=int, default=17)
     p.set_defaults(func=cmd_export)
 
     p = sub.add_parser("quantize", help="INT8-quantize an ONNX model")
@@ -230,6 +234,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--providers", type=str, default="", help="Comma list, e.g. openvino,cpu")
     p.add_argument("--npu-only", action="store_true")
     p.add_argument("--allow-torch", action="store_true")
+    p.add_argument(
+        "--openvino-device",
+        type=str,
+        default="",
+        help="OpenVINO EP device_type, e.g. AUTO:NPU,GPU / NPU / GPU / CPU",
+    )
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--warmup", type=int, default=5)
@@ -243,6 +253,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--providers", type=str, default="")
     p.add_argument("--npu-only", action="store_true")
     p.add_argument("--allow-torch", action="store_true")
+    p.add_argument(
+        "--openvino-device",
+        type=str,
+        default="",
+        help="OpenVINO EP device_type, e.g. AUTO:NPU,GPU / NPU / GPU / CPU",
+    )
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--conf", type=float, default=0.25)
     p.set_defaults(func=cmd_predict)

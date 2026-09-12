@@ -1,0 +1,27 @@
+# Gap-fill fine-tuning data for vest/no_vest reliability (README priority #1).
+# Source: Roboflow Universe novest/no-vest-detect, version 1 (CC BY 4.0).
+# Remapped via: python scripts/remap_labels.py --source data/raw/gap_vest --out data/processed/gap_vest --mapping gap_vest
+# Only helmet/no_helmet/vest/no_vest/person have real annotations here (18/324/69/456/6
+# boxes in train) — the other 9 unified classes have zero examples in this dataset,
+# which is fine: with a frozen backbone + low LR (see configs/finetune/gap_vest.yaml),
+# this only refines vest/helmet/person-related weights, leaving the rest ~unchanged.
+path: data/processed/gap_vest
+train: train/images
+val: valid/images
+test: test/images
+nc: 14
+names:
+  - helmet
+  - no_helmet
+  - vest
+  - no_vest
+  - goggles
+  - no_goggles
+  - gloves
+  - no_gloves
+  - mask
+  - no_mask
+  - person
+  - cone
+  - ladder
+  - fall_detected

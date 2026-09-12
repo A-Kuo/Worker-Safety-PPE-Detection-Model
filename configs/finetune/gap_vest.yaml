@@ -1,0 +1,21 @@
+# Fine-tune the adopted Hexmon checkpoint on vest/no_vest gap-fill data
+# (README priority #1: vest/no_vest at 95%+ P&R).
+#
+# base_checkpoint MUST be the class-order-corrected checkpoint, not the raw
+# fetched one: Hexmon's own class order is alphabetical, not
+# UNIFIED_CLASS_NAMES's order, and configs/data/gap_finetune.yaml (like every
+# dataset remapped via scripts/remap_labels.py) always uses the canonical
+# unified order. See models/pretrained/manifest.json's
+# "hexmon_vyra_unified_order" entry and scripts/reorder_checkpoint_classes.py.
+experiment: gap_vest
+base_checkpoint: models/pretrained/hexmon_vyra/best_unified_order.pt
+data: configs/data/gap_finetune.yaml
+epochs: 30
+imgsz: 640
+batch: 16
+seed: 42
+lr0: 0.001
+freeze: 10
+patience: 10
+cos_lr: true
+pretrained: true

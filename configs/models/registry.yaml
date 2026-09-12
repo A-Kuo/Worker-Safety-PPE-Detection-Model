@@ -1,0 +1,52 @@
+# Known external base checkpoints considered for fine-tuning.
+#
+# This is a hand-curated ledger of *candidates* — what we know about a
+# checkpoint and whether we adopted it. The auto-written, machine-verified
+# record of what was actually downloaded (sha256, fetch timestamp) lives in
+# models/pretrained/manifest.json, written by scripts/fetch_checkpoint.py.
+#
+# Fetch a registry entry with:
+#   python scripts/fetch_checkpoint.py --repo-id <repo_id> --filename <filename> \
+#       --revision <revision> --name <name> --license <license>
+
+checkpoints:
+  - name: hexmon_vyra
+    repo_id: Hexmon/vyra-yolo-ppe-detection
+    filename: best.pt
+    revision: 08895b33d95d2587423ebe4f7c1b9c41beebd642
+    license: cc-by-4.0
+    adopted: true
+    notes: >
+      YOLOv8m, 14 classes, trained on the same Roboflow "PPE Combined Model v4"
+      export this repo already uses (see ATTRIBUTION.md). Its raw class-name
+      strings are byte-for-byte identical to schema.py's COMBINED_RAW_TO_UNIFIED
+      keys, so no new schema mapping is required. Adopted as the fine-tuning
+      base checkpoint after Phase 0 vetting (schema + license verified; the
+      real-footage detection-quality check was deferred).
+
+      IMPORTANT: Hexmon's own class-id order is alphabetical, not
+      UNIFIED_CLASS_NAMES's hand-ordered sequence. Ultralytics matches
+      predictions to ground truth by numeric id, not name, so using
+      best.pt directly with scripts/eval.py or scripts/finetune.py against a
+      standard unified-order dataset yaml produces wrong results (confirmed
+      empirically — see docs/baseline_hf.md). Use
+      models/pretrained/hexmon_vyra/best_unified_order.pt instead (see the
+      "hexmon_vyra_unified_order" entry in manifest.json) — produced by
+      scripts/reorder_checkpoint_classes.py and verified bit-identical
+      apart from the class relabeling via scripts/verify_reorder.py.
+
+  - name: tanishjain9_yolov8n_6class
+    repo_id: Tanishjain9/yolov8n-ppe-detection-6classes
+    filename: best.pt
+    revision: null
+    license: mit
+    adopted: false
+    notes: >
+      Rejected. Only 6 classes (Gloves, Vest, goggles, helmet, mask,
+      safety_shoe) with no negative/violation classes at all (no no_vest,
+      no_helmet, etc.) — structurally incompatible with this repo's
+      paired-class compliance design, not a naming/remapping fix. Its
+      "edge-optimized for Jetson/TensorRT" claims are self-reported in the
+      model card with no benchmark data, and its training data is described
+      only as an unlinked "custom PPE dataset." Revision left unpinned since
+      it was never fetched into the repo.

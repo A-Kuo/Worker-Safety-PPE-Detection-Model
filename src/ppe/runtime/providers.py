@@ -187,6 +187,24 @@ def provider_status() -> list[dict]:
     return rows
 
 
+def key_for_ort_name(ort_name: str) -> str | None:
+    ep = _BY_ORT.get(ort_name)
+    return ep.key if ep else None
+
+
+def provider_options_for(key: str, *, openvino_device_type: str | None = None) -> dict:
+    """Per-provider ``provider_options`` dict for ``InferenceSession``.
+
+    Only the OpenVINO EP has a device_type concept today (NPU/GPU/CPU/AUTO
+    heterogeneous strings, e.g. ``"AUTO:NPU,GPU"``). Every other provider
+    gets an empty dict — ORT requires one options dict per provider name
+    when ``provider_options`` is passed at all.
+    """
+    if key == "openvino" and openvino_device_type:
+        return {"device_type": openvino_device_type}
+    return {}
+
+
 def filter_npu_keys(keys: Iterable[str]) -> list[str]:
     out = []
     for key in keys:

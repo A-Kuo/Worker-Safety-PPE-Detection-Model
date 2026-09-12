@@ -10,7 +10,7 @@ import numpy as np
 
 from ppe.compliance import Detection
 from ppe.runtime.config import ExecutionPolicy
-from ppe.runtime.providers import resolve_providers
+from ppe.runtime.providers import key_for_ort_name, provider_options_for, resolve_providers
 from ppe.schema import (
     COMBINED_RAW_TO_UNIFIED,
     CONSTRUCTION_TO_UNIFIED,
@@ -68,10 +68,17 @@ class OnnxRuntimeBackend(InferenceBackend):
                 "No ORT execution providers available. Install onnxruntime "
                 "and/or a vendor EP package."
             )
-        self.session = ort.InferenceSession(
-            str(self.model_path),
-            providers=self.providers,
-        )
+        provider_options = [
+            provider_options_for(
+                key_for_ort_name(name) or "",
+                openvino_device_type=policy.openvino_device_type,
+            )
+            for name in self.providers
+        ]
+        session_kwargs: dict[str, Any] = {"providers": self.providers}
+        if any(provider_options):
+            session_kwargs["provider_options"] = provider_options
+        self.session = ort.InferenceSession(str(self.model_path), **session_kwargs)
         self.input_name = self.session.get_inputs()[0].name
         self.input_shape = self.session.get_inputs()[0].shape
         self.class_names = class_names or {
@@ -93,6 +100,7 @@ class OnnxRuntimeBackend(InferenceBackend):
             "input_shape": list(self.input_shape),
             "imgsz": self.policy.imgsz,
             "npu_only": self.policy.npu_only,
+            "openvino_device_type": self.policy.openvino_device_type,
         }
 
 

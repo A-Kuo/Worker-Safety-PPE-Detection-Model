@@ -1,0 +1,19 @@
+# Fine-tune the adopted Hexmon checkpoint on goggles hard-negative gap data.
+#
+# PENDING: `data` below does not exist yet — Phase 2 (Roboflow Universe
+# search for goggles-vs-glasses hard negatives, license check, remap to the
+# unified schema) is a manual/human-judgment step, not yet done. This config
+# documents the intended shape; scripts/finetune.py will fail loudly and
+# clearly (missing data yaml) until configs/data/gap_finetune.yaml is built.
+experiment: gap_goggles
+base_checkpoint: models/pretrained/hexmon_vyra/best.pt
+data: configs/data/gap_finetune.yaml
+epochs: 30
+imgsz: 640
+batch: 16
+seed: 42
+lr0: 0.001
+freeze: 10
+patience: 10
+cos_lr: true
+pretrained: true

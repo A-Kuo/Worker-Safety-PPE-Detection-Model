@@ -96,6 +96,21 @@ def default_specs() -> list[DatasetSpec]:
             optional=True,
             notes="Optional local val only. Tiny split (2605/114/82). Never merge into Combined.",
         ),
+        DatasetSpec(
+            key="gap_vest",
+            workspace="novest",
+            project="no-vest-detect",
+            version=1,
+            dest=raw / "gap_vest",
+            optional=True,
+            notes=(
+                "Gap-fill fine-tuning data for vest/no_vest reliability (README priority #1). "
+                "Version 1 chosen deliberately: v2-v4 omit various classes on export (verified via "
+                "the Roboflow API's preprocessing.remap.labels.*.omit field before picking this one — "
+                "project-stixd/vest-5byyt was rejected outright for omitting no-vest in EVERY version). "
+                "v1 omits nothing: 998 images, ~1,112 no-vest-labeled instances across spelling variants."
+            ),
+        ),
     ]
 
 
@@ -114,7 +129,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--only",
         nargs="+",
-        choices=["combined", "hardhat", "construction"],
+        choices=["combined", "hardhat", "construction", "gap_vest"],
         default=None,
     )
     parser.add_argument("--skip-construction", action="store_true")

@@ -1,0 +1,146 @@
+{
+  "domain": "combined",
+  "weights": "C:\\GitHub\\Worker Safety PPE Detection Model\\models\\pretrained\\hexmon_vyra\\best.pt",
+  "data": "C:\\GitHub\\Worker Safety PPE Detection Model\\data\\processed\\combined\\data.yaml",
+  "split": "test",
+  "metrics": {
+    "precision": 0.049072972460412964,
+    "recall": 0.13005587977701413,
+    "map50": 0.05718869010005107,
+    "map50_95": 0.040420157086969895,
+    "per_class": [
+      {
+        "id": 0,
+        "name": "Fall-Detected",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 1,
+        "name": "Gloves",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 2,
+        "name": "Goggles",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 3,
+        "name": "Hardhat",
+        "precision": 0.00020835989066852163,
+        "recall": 0.004424778761061947,
+        "f1": 0.00039797920510879536,
+        "map50": 3.3003300330033004e-06,
+        "map50_95": 2.3102310231023105e-06
+      },
+      {
+        "id": 4,
+        "name": "Ladder",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 5,
+        "name": "Mask",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 6,
+        "name": "NO-Gloves",
+        "precision": 0.001508981011798142,
+        "recall": 0.002325581395348837,
+        "f1": 0.0018303304494049993,
+        "map50": 1.5527950310559007e-05,
+        "map50_95": 9.316770186335403e-06
+      },
+      {
+        "id": 7,
+        "name": "NO-Goggles",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 8,
+        "name": "NO-Hardhat",
+        "precision": 0.19240993627237774,
+        "recall": 0.9057750759878419,
+        "f1": 0.31739665484823126,
+        "map50": 0.17881695445753903,
+        "map50_95": 0.13171593030373122
+      },
+      {
+        "id": 9,
+        "name": "NO-Mask",
+        "precision": 0.492894337270937,
+        "recall": 0.908256880733945,
+        "f1": 0.6390097907327608,
+        "map50": 0.6218058786628324,
+        "map50_95": 0.434154641912638
+      },
+      {
+        "id": 10,
+        "name": "NO-Safety Vest",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 11,
+        "name": "Person",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 12,
+        "name": "Safety Cone",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      {
+        "id": 13,
+        "name": "Safety Vest",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      }
+    ]
+  },
+  "compliance": {
+    "images": 64,
+    "workers": 0,
+    "workers_with_missing_ppe": 0,
+    "missing_counts": {}
+  }
+}

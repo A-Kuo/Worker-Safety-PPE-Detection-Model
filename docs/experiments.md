@@ -84,6 +84,14 @@ Fill from `scripts/benchmark.py` after `scripts/export_onnx.py`.
 | PyTorch | 960×540 | pending training run | pending training run | pending training run | pending training run |
 | ORT | 960×540 | pending training run | pending training run | pending training run | pending training run |
 
-## External reference (not this work)
+## Scope note: why E1–E3 weren't run this cycle
 
-[Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) is a YOLOv8m trained on Combined v4. Cite it as an external reference, not as a result from this repo.
+The E0–E4 grid below is complete and ready to run (data downloaded/remapped/subset, configs written), but this cycle's priority shifted to a pretrained-checkpoint fine-tuning track instead of a full from-scratch grid search (see `docs/baseline_hf.md` and `configs/finetune/`). **E0 is kept and run** as a genuine from-scratch comparison point; **E1–E3 are deliberately deferred**, not abandoned — the question they'd answer (which architecture/loss/aug variant wins from scratch) is superseded for now by the raw-checkpoint-vs-fine-tuned-vs-E0 comparison, which is the more portfolio-relevant result. Revisit E1–E3 if that comparison shows from-scratch training is worth pursuing further.
+
+## Fine-tuning base checkpoint
+
+[Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m, trained on Combined v4) was vetted and adopted as the base checkpoint for gap fine-tuning — see `ATTRIBUTION.md` and `configs/models/registry.yaml` for the vetting record, and `docs/baseline_hf.md` for its raw (pre-fine-tune) numbers on this repo's eval sets. Its raw numbers are an external result, not a model trained in this repo. Use `models/pretrained/hexmon_vyra/best_unified_order.pt` (class-order-corrected via `scripts/reorder_checkpoint_classes.py`, not the raw fetch) for any evaluation or fine-tuning — see `ATTRIBUTION.md` for why.
+
+## Gap fine-tuning: vest/no_vest reliability
+
+Gap fine-tuning targets **vest/no_vest** (README priority #1), not goggles as originally scoped — a concrete dataset was found first ([novest/no-vest-detect v1](https://universe.roboflow.com/novest/no-vest-detect), 998 images, ~1,112 no-vest instances, CC BY 4.0; remapped via `scripts/remap_labels.py --mapping gap_vest` with zero dropped boxes). Config: `configs/finetune/gap_vest.yaml` / `configs/data/gap_finetune.yaml`. Goggles hard-negative fine-tuning stays deferred; `configs/finetune/gap_goggles.yaml` remains as a template. Run: `python scripts/finetune.py --exp gap_vest` (Kaggle/Colab GPU — not run locally yet).

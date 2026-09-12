@@ -1,0 +1,26 @@
+{
+  "checkpoints": {
+    "hexmon_vyra": {
+      "repo_id": "Hexmon/vyra-yolo-ppe-detection",
+      "filename": "best.pt",
+      "revision": "08895b33d95d2587423ebe4f7c1b9c41beebd642",
+      "license": "cc-by-4.0",
+      "sha256": "2b33d4d016f9751c5a25f4a72ce050e0a7e4e140b11c1669978d7154003a4f61",
+      "local_path": "models\\pretrained\\hexmon_vyra\\best.pt",
+      "fetched_at": "2026-09-11T16:26:01+00:00",
+      "fetched_by": "aus.kuo03@gmail.com"
+    },
+    "hexmon_vyra_unified_order": {
+      "derived_from": "hexmon_vyra",
+      "transform": "scripts/reorder_checkpoint_classes.py",
+      "note": "Detection-head classification-conv output channels permuted from Hexmon's own alphabetical class order to src/ppe/schema.py's UNIFIED_CLASS_NAMES order. Box-regression weights and all other weights are bit-identical to hexmon_vyra/best.pt — this is a pure relabeling, not a retrain. Fixes both scripts/eval.py's id-mismatched raw mAP (see docs/baseline_hf.md) and lets scripts/finetune.py fine-tune against standard unified-order dataset yamls without a schema-guard rejection.",
+      "sha256": "7d337126aa43a3b0f012805d2bac9866a26f1ddde11b20223221d5b650cc097a",
+      "local_path": "models\\pretrained\\hexmon_vyra\\best_unified_order.pt",
+      "created_at": "2026-09-12T00:00:00+00:00",
+      "created_by": "aus.kuo03@gmail.com",
+      "verified": true,
+      "verification_command": "python scripts/verify_reorder.py --original models/pretrained/hexmon_vyra/best.pt --reordered models/pretrained/hexmon_vyra/best_unified_order.pt --image <test image>",
+      "verification_result": "PASS on 4 real test images spanning helmet/no_gloves/gloves/fall_detected classes — identical boxes and confidences, correctly relabeled."
+    }
+  }
+}

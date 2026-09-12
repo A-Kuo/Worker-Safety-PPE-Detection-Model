@@ -29,6 +29,9 @@ class ExecutionPolicy:
     conf: float = 0.25
     # Optional explicit model path.
     model: str | None = None
+    # OpenVINO EP device_type, e.g. "AUTO:NPU,GPU", "NPU", "GPU", "CPU".
+    # Only applies when the openvino provider is selected; ignored otherwise.
+    openvino_device_type: str | None = None
 
     extra: dict = field(default_factory=dict)
 
@@ -43,6 +46,7 @@ class ExecutionPolicy:
         imgsz = int(os.environ.get("PPE_IMGSZ", "640"))
         conf = float(os.environ.get("PPE_CONF", "0.25"))
         model = os.environ.get("PPE_WEIGHTS") or os.environ.get("PPE_MODEL")
+        openvino_device_type = os.environ.get("PPE_OPENVINO_DEVICE") or None
         policy = cls(
             providers=providers,
             npu_only=npu_only,
@@ -52,6 +56,7 @@ class ExecutionPolicy:
             imgsz=imgsz,
             conf=conf,
             model=model,
+            openvino_device_type=openvino_device_type,
         )
         for key, value in overrides.items():
             if hasattr(policy, key) and value is not None:

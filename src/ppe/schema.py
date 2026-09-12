@@ -58,6 +58,23 @@ HHU_TO_UNIFIED: dict[str, str] = {
     "head": "no_helmet",
 }
 
+# Gap-fill fine-tuning data for vest/no_vest reliability: novest/no-vest-detect
+# (Roboflow Universe), version 1. Exact class strings from its data.yaml —
+# includes duplicate concepts under different spellings/casing (the dataset
+# merges multiple annotation passes). "worker" has no dedicated unified class;
+# treated as "person" (bounding boxes represent a person, same as elsewhere
+# in this schema). lookup_mapping() case-folds, so "Vest"/"vest" share one entry.
+GAP_VEST_TO_UNIFIED: dict[str, str] = {
+    "Helmet": "helmet",
+    "No-Helmet": "no_helmet",
+    "no helmet": "no_helmet",
+    "Vest": "vest",
+    "No-Vest": "no_vest",
+    "no vest": "no_vest",
+    "Person": "person",
+    "worker": "person",
+}
+
 # Classes present in both Construction v28 (after remap) and Combined PPE.
 SHARED_EVAL_CLASSES: list[str] = [
     "helmet",

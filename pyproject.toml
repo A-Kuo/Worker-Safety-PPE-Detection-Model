@@ -23,6 +23,14 @@ edge = [
     "onnx>=1.15.0",
     "onnxconverter-common>=1.14.0",
 ]
+# Only needed by scripts/fetch_checkpoint.py — not a core runtime dependency.
+hf = ["huggingface_hub>=0.24"]
+# Intel NPU/iGPU edge path (Lunar Lake AI Boost NPU + Arc iGPU via OpenVINO).
+# `onnxruntime-openvino` occupies the same import namespace as the plain
+# `onnxruntime` package in the `edge` extra above and generally cannot
+# coexist with it in one environment — install this in a separate venv,
+# or uninstall `onnxruntime` first. See docs/edge_npu.md.
+edge-intel-npu = ["onnxruntime-openvino>=1.19.0"]
 
 [project.scripts]
 ppe = "ppe.cli:main"

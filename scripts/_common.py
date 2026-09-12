@@ -297,6 +297,7 @@ def mapping_for_source(schema, kind: str) -> dict[str, str]:
         "construction": "CONSTRUCTION_TO_UNIFIED",
         "hhu": "HHU_TO_UNIFIED",
         "hardhat": "HHU_TO_UNIFIED",
+        "gap_vest": "GAP_VEST_TO_UNIFIED",
     }[kind]
     value = getattr(schema, attr)
     return dict(value)
@@ -308,7 +309,36 @@ def infer_mapping_kind(names: Sequence[str]) -> str:
         return "construction"
     if "head" in nset or "hi-viz vest" in nset or "hi-viz helmet" in nset:
         return "hhu"
+    if "worker" in nset:
+        return "gap_vest"
     return "combined"
+
+
+def mapped_unified_names(schema, raw_names: Sequence[str]) -> list[str]:
+    """Map a checkpoint's/dataset's raw per-position class names to unified schema names.
+
+    Names already equal to a unified name pass through unchanged (e.g. a
+    checkpoint already using unified strings). Raw third-party names (e.g.
+    Hexmon's "Hardhat", "NO-Hardhat", ...) are mapped via the same
+    ``*_TO_UNIFIED`` tables ``ppe.schema`` already uses for dataset remapping
+    — the point is to compare/reorder by *concept* at each position, not by
+    literal string, since a raw checkpoint's strings will never literally
+    equal unified strings by construction.
+    """
+    unified_set = set(getattr(schema, "UNIFIED_CLASS_NAMES", []))
+    if all(name in unified_set for name in raw_names):
+        return list(raw_names)
+    mapping = mapping_for_source(schema, infer_mapping_kind(raw_names))
+    mapped: list[str] = []
+    for raw in raw_names:
+        unified = lookup_mapping(mapping, raw)
+        if unified is None:
+            raise ValueError(
+                f"Cannot map class {raw!r} to the unified schema "
+                "(not in schema.py's raw-to-unified tables and not already a unified name)."
+            )
+        mapped.append(unified)
+    return mapped
 
 
 def build_id_map(schema, source_names: Sequence[str], name_mapping: Mapping[str, str]) -> dict[int, int]:

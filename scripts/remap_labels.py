@@ -46,7 +46,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mapping",
-        choices=["combined", "construction", "hhu", "auto"],
+        choices=["combined", "construction", "hhu", "gap_vest", "auto"],
         default="auto",
     )
     parser.add_argument(
