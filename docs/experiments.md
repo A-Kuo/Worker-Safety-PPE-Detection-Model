@@ -46,6 +46,8 @@ Construction baseline (Snehil Sanyal, 10-class, val n=114): global mAP50 = 0.809
 | Model | helmet | no_helmet | vest | no_vest | mask | no_mask | person | cone | shared mAP50 |
 |---|---|---|---|---|---|---|---|---|---|
 | Construction YOLOv8n (inherited) | pending val pass | pending val pass | pending val pass | pending val pass | pending val pass | pending val pass | pending val pass | pending val pass | n/a (10-class global 0.809) |
+| Hexmon raw (class-order-corrected) | mAP50 0.860 | mAP50 0.739 | mAP50 0.533 | mAP50 0.159 | mAP50 0.521 | mAP50 0.622 | mAP50 0.949 | mAP50 0.710 | 0.747 (14-class global; see `docs/baseline_hf.md`) |
+| gap_vest fine-tuned | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run |
 | E0 Combined 12k | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run |
 | E4 Combined 44k | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run |
 
