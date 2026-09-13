@@ -35,6 +35,7 @@ from _common import (  # noqa: E402
     load_yaml,
     mapped_unified_names,
     read_dataset_names,
+    validate_train_kwargs,
 )
 
 CONFIG_DIR = REPO_ROOT / "configs" / "finetune"
@@ -225,6 +226,8 @@ def main() -> int:
         cfg["resume"] = True
     else:
         check_schema_compatibility(base_checkpoint, data_yaml)
+
+    validate_train_kwargs(cfg)
 
     print(f"Experiment:      {args.exp}")
     print(f"Config:          {cfg_path}")

@@ -404,6 +404,26 @@ def write_unified_yaml(
         dump_yaml(dest, payload)
 
 
+def validate_train_kwargs(kwargs: Mapping[str, Any]) -> None:
+    """Fail fast on an Ultralytics ``train()`` kwarg that doesn't exist.
+
+    Config-file typos/legacy keys (e.g. ``fl_gamma``, a YOLOv5-era focal-loss
+    argument absent from modern Ultralytics ``train()``) only surface deep in
+    ``model.train()`` today — after downloading gigabytes of data and
+    starting a GPU job. Call this right after resolving a config's kwargs
+    (dry-run included) so a bad key is caught before any of that happens.
+    Raises ``SystemExit`` with the same message Ultralytics itself would
+    give, just earlier.
+    """
+    from ultralytics.cfg import get_cfg
+
+    checkable = {k: v for k, v in kwargs.items() if k not in {"data", "model", "resume"}}
+    try:
+        get_cfg(overrides=dict(checkable))
+    except Exception as exc:  # noqa: BLE001 — surface Ultralytics' own message
+        raise SystemExit(f"Invalid Ultralytics train() argument in config: {exc}") from exc
+
+
 def link_or_copy(src: Path, dst: Path) -> str:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if dst.exists():

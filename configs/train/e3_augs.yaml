@@ -1,5 +1,13 @@
-# E3 — YOLOv8n + stronger industrial-camera augs (blur/brightness/occlusion-ish crop).
-# Same subset/seed as E0. Native Ultralytics keys plus blur_* for the train wrapper.
+# E3 — YOLOv8n + stronger industrial-camera augs (brightness/occlusion-ish crop).
+# Same subset/seed as E0. All keys below are native Ultralytics train() args.
+#
+# NOTE: `blur_prob`/`blur_limit` were removed — there is no such Ultralytics
+# train() wrapper; scripts/train.py passes every config key straight to
+# `model.train(**kwargs)`, so these were never functional (confirmed
+# empirically: `get_cfg` rejects them the same way it rejects `fl_gamma`).
+# `hsv_v` (value/brightness jitter) and `erasing` (random erasing, a
+# reasonable occlusion-ish stand-in) already cover this experiment's intent
+# with real, wired augmentation knobs.
 experiment: e3_augs
 model: yolov8n.pt
 data: configs/data/combined.yaml
@@ -12,7 +20,6 @@ cos_lr: true
 patience: 20
 pretrained: true
 optimizer: auto
-fl_gamma: 0.0
 close_mosaic: 10
 hsv_h: 0.015
 hsv_s: 0.7
@@ -27,5 +34,3 @@ mosaic: 1.0
 mixup: 0.15
 copy_paste: 0.1
 erasing: 0.5
-blur_prob: 0.15
-blur_limit: 3

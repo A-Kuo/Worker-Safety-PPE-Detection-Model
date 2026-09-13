@@ -35,8 +35,8 @@ python scripts/calibrate.py --weights runs/train/e4_full44k/weights/best.pt
 |---|---|---|---|---|---|---|---|---|---|
 | E0 | YOLOv8n default | Unified baseline | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | 12k subset |
 | E1 | YOLOv8s | Accuracy vs FPS | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | same subset/seed |
-| E2 | `fl_gamma=1.5` | Imbalance / FN on `no_*` | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | Ultralytics focal |
-| E3 | Stronger augs (blur, brightness, occlusion-ish crop) | Industrial cameras | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | same subset/seed |
+| E2 | `cls=1.0` (2x default) | Imbalance / FN on `no_*` | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | `fl_gamma` doesn't exist in this Ultralytics version (was YOLOv5-era; confirmed empirically) — swapped for the real, wired `cls` loss-gain kwarg |
+| E3 | Stronger augs (brightness, occlusion-ish crop) | Industrial cameras | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | same subset/seed; `blur_prob`/`blur_limit` dropped — never a real Ultralytics arg |
 | E4 | YOLOv8n 50e on full 44k | Confirm subset did not lie | pending training run | pending training run | pending training run | pending training run | pending training run | pending training run | shipped weights |
 
 ## Shared-class comparison vs Construction baseline

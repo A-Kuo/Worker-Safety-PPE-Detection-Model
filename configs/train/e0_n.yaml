@@ -11,5 +11,4 @@ cos_lr: true
 patience: 20
 pretrained: true
 optimizer: auto
-fl_gamma: 0.0
 close_mosaic: 10

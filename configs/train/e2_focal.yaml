@@ -1,4 +1,13 @@
-# E2 — YOLOv8n + Ultralytics focal loss. Same subset/seed as E0; targets no_* FNs.
+# E2 — YOLOv8n + upweighted classification loss. Same subset/seed as E0; targets no_* FNs.
+#
+# NOTE: `fl_gamma` (Ultralytics focal-loss gamma) does not exist as a train()
+# argument in this Ultralytics version (>=8.1.0) — confirmed empirically:
+# `get_cfg(overrides={"fl_gamma": ...})` raises SyntaxError regardless of
+# value, on both the locally-installed version and Kaggle's. It was
+# YOLOv5-era; modern YOLOv8+ doesn't expose a focal-loss toggle at all. `cls`
+# (classification loss gain, default 0.5) is the real, currently-wired lever
+# closest to this experiment's original intent (weight classification harder
+# to fight FN on no_* classes) — doubled here as a starting point.
 experiment: e2_focal
 model: yolov8n.pt
 data: configs/data/combined.yaml
@@ -11,5 +20,5 @@ cos_lr: true
 patience: 20
 pretrained: true
 optimizer: auto
-fl_gamma: 1.5
+cls: 1.0
 close_mosaic: 10

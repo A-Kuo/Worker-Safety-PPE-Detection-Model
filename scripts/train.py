@@ -17,7 +17,7 @@ _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-from _common import REPO_ROOT, first_existing, load_yaml  # noqa: E402
+from _common import REPO_ROOT, first_existing, load_yaml, validate_train_kwargs  # noqa: E402
 
 EXPERIMENTS = ("e0_n", "e1_s", "e2_focal", "e3_augs", "e4_full44k")
 CONFIG_DIR = REPO_ROOT / "configs" / "train"
@@ -128,6 +128,8 @@ def main() -> int:
             raise SystemExit(" --resume set but last.pt was not found. Pass --last path/to/last.pt")
         model_name = str(last)
         train_kwargs["resume"] = True
+
+    validate_train_kwargs(train_kwargs)
 
     print(f"Experiment: {args.exp}")
     print(f"Config:     {cfg_path}")
