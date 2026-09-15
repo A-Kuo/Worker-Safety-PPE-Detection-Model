@@ -64,6 +64,9 @@ This project also uses a **shared label schema**, **recall-first** thresholds on
 | Person / Safety Cone | `person` / `cone` |
 | Ladder / Fall-Detected | `ladder` / `fall_detected` |
 
+<img width="1024" height="683" alt="construction-safety" src="https://github.com/user-attachments/assets/5093d0f1-534b-4937-bc49-9a87c8a6630f" />
+
+
 Construction-only `machinery` / `vehicle` stay on the Construction baseline; they are **not** in the unified model. **Boots are future work** (Combined has no `boots` / `no_boots`); do not invent the class this cycle.
 
 **No Construction ↔ Combined merge.** Construction already clones imagery from Combined and other Universe sets; merging without perceptual hashing would leak train/eval. Protocol: remap separately; evaluate Construction on mapped shared classes only.
