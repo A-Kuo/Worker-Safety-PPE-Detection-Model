@@ -30,7 +30,7 @@ from _common import (  # noqa: E402
     read_dataset_names,
 )
 
-DEFAULT_SOURCE = REPO_ROOT / "data" / "raw" / "combined"
+DEFAULT_SOURCE = REPO_ROOT / "data" / "processed" / "combined"
 DEFAULT_OUT = REPO_ROOT / "data" / "raw" / "combined_12k"
 DEFAULT_N = 12000
 DEFAULT_SEED = 42

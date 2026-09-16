@@ -1,6 +1,18 @@
 # Personal Protective Equipment Combined Model v4 — unified 14-class schema.
-# Download + remap scripts should populate data/raw/combined/ with rewritten labels.
-path: data/raw/combined
+#
+# path MUST be the remapped output (data/processed/combined), not the raw
+# Roboflow export (data/raw/combined). data/raw/combined's label files keep
+# Roboflow's own alphabetical class ids (see data/raw/combined/data.yaml) —
+# scripts/remap_labels.py never rewrites them in place, it writes a separate
+# copy to data/processed/. This file pointed at data/raw/combined for a long
+# time despite declaring unified `names:` below, which silently trained/eval'd
+# every model against mislabeled data (confirmed empirically: the same box in
+# data/raw/combined/.../labels/*.txt used raw id 3 = "Hardhat", while
+# data/processed/combined/.../labels/*.txt correctly uses unified id 0 =
+# "helmet" for the identical box). A checkpoint trained under the old, wrong
+# path scores near-zero when evaluated against correctly-labeled ground
+# truth — that's how this was caught, not a theoretical concern.
+path: data/processed/combined
 train: train/images
 val: valid/images
 test: test/images

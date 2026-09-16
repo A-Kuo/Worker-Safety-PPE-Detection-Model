@@ -66,13 +66,39 @@ def resolve_config_path(exp: str, override: Path | None) -> Path:
     return path
 
 
+def _subset_dirname(n: int) -> str:
+    """Match scripts/make_subset.py's actual --out convention (12000 -> "combined_12k")."""
+    if n % 1000 == 0:
+        return f"combined_{n // 1000}k"
+    return f"combined_{n}"
+
+
+def resolve_subset_data(subset_size: int) -> Path:
+    candidate = REPO_ROOT / "data" / "raw" / _subset_dirname(subset_size) / "data.yaml"
+    if not candidate.exists():
+        raise SystemExit(
+            f"subset_size={subset_size} is set in this config but {candidate} does not "
+            "exist yet. Build it first:\n"
+            f"  python scripts/make_subset.py --source data/processed/combined "
+            f"--out data/raw/{_subset_dirname(subset_size)} --n {subset_size}"
+        )
+    return candidate
+
+
 def load_train_kwargs(path: Path) -> dict[str, Any]:
     cfg = load_yaml(path)
     # Allow a nested `train:` block or a flat Ultralytics kwargs file.
     if isinstance(cfg.get("train"), dict) and "data" not in cfg:
         cfg = dict(cfg["train"])
+    subset_size = cfg.get("subset_size")
     for key in META_KEYS:
         cfg.pop(key, None)
+    if subset_size:
+        # subset_size takes precedence over `data:` — previously this key was
+        # silently dropped and every experiment trained on the full dataset
+        # regardless of what subset_size said, contradicting docs/experiments.md's
+        # "isolate on 12k, confirm once on 44k" protocol.
+        cfg["data"] = str(resolve_subset_data(int(subset_size)))
     data = cfg.get("data")
     if isinstance(data, str) and not Path(data).is_absolute():
         resolved = REPO_ROOT / data

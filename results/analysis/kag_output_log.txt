@@ -1,0 +1,25 @@
+31836.5s	128	                   all       8814      22077      0.711      0.815      0.769      0.497
+31836.5s	129	                helmet        899        899      0.754      0.812      0.837      0.537
+31836.5s	130	             no_helmet        395        858      0.854      0.924      0.952      0.492
+31836.5s	131	                  vest        746        827      0.829      0.967      0.963      0.588
+31836.5s	132	               no_vest       3191       8952      0.803      0.898      0.894       0.52
+31836.5s	133	               goggles        193        202      0.888      0.941      0.951      0.797
+31836.5s	134	            no_goggles        292        554      0.477      0.895      0.511      0.403
+31836.5s	135	                gloves        571       1258      0.811       0.84      0.896      0.435
+31836.5s	136	             no_gloves        679        859      0.854      0.909      0.951      0.555
+31836.5s	137	                  mask        865       2222       0.59      0.868      0.733      0.486
+31836.5s	138	               no_mask        327        505      0.563      0.826      0.596      0.427
+31836.5s	139	                person        189        361      0.312      0.291       0.22      0.109
+31836.5s	140	                  cone        193        277      0.892      0.892      0.914      0.757
+31836.5s	141	                ladder        338       3016      0.712      0.657      0.673       0.36
+31836.5s	142	         fall_detected        609       1287      0.609      0.684      0.683       0.49
+31836.5s	143	Speed: 0.2ms preprocess, 2.1ms inference, 0.0ms loss, 1.0ms postprocess per image
+31836.5s	144	Results saved to [1m/kaggle/working/ppe/runs/train/e0_n[0m
+31929.4s	145	/usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+31929.4s	146	  cells[i][c] = re.sub('\\\\\|', '|', cell)
+31929.5s	147	/usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+31929.5s	148	  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+31930.2s	149	[NbConvertApp] Converting notebook __notebook__.ipynb to notebook
+41992.5s	150	[NbConvertApp] Writing 74216 bytes to __notebook__.ipynb
+41994.9s	151	[NbConvertApp] Converting notebook __notebook__.ipynb to html
+41995.7s	152	[NbConvertApp] Writing 341058 bytes to __results__.html

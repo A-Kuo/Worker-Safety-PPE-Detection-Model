@@ -1,6 +1,10 @@
 # Hard Hat Universe — held-out domain eval only (do not mix into training).
 # Remap helmet / hi-viz helmet / hi-viz vest / person / head onto UNIFIED_CLASS_NAMES.
-path: data/raw/hardhat
+#
+# path MUST be the remapped output (data/processed/hardhat), not data/raw/hardhat
+# (raw HHU export labels, unmapped). Same bug class as configs/data/combined.yaml —
+# see that file's comment for how this was found.
+path: data/processed/hardhat
 train: train/images
 val: valid/images
 test: test/images
