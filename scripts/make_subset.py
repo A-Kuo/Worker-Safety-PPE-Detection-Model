@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import sys
 from collections import Counter, defaultdict
@@ -157,10 +158,25 @@ def main() -> int:
     for split, recs in split_recs.items():
         for rec in recs:
             presence_before.update(rec["classes"])
+    dataset_root_abs = os.path.normcase(os.path.abspath(dataset_root))
     for split, recs in chosen.items():
         list_name = f"{split}.txt"
         list_path = dest / list_name
-        lines = [str(rec["image"].resolve()).replace("\\", "/") for rec in recs]
+        # abspath, NOT Path.resolve(): remap_labels.py builds <processed>/images as
+        # symlinks back into <raw>/images on Linux, and resolve() follows them, so
+        # the list would point at raw images. Ultralytics finds labels by swapping
+        # /images/ -> /labels/ in each listed path, so that silently trains and
+        # validates on the raw, unremapped labels while a directory-based eval on
+        # the processed yaml scores ~0 (this cost two full Kaggle credit budgets).
+        lines = [os.path.abspath(rec["image"]).replace("\\", "/") for rec in recs]
+        for line in lines:
+            label_abs = os.path.normcase(os.path.abspath(label_path_for_image(Path(line))))
+            if not label_abs.startswith(dataset_root_abs + os.sep):
+                raise SystemExit(
+                    f"Subset entry {line} maps to label file {label_abs}, which is outside the "
+                    f"source dataset {dataset_root_abs}. Refusing to write a subset whose labels "
+                    "would not be the source dataset's (symlink resolved back to raw?)."
+                )
         list_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
         list_rel[split] = list_name
         for rec in recs:
@@ -192,7 +208,7 @@ def main() -> int:
         return {names[k] if k < len(names) else str(k): int(v) for k, v in sorted(counter.items())}
 
     manifest = {
-        "source": str(source.resolve()),
+        "source": os.path.abspath(source),
         "n_requested": args.n,
         "n_selected": sum(len(v) for v in chosen.values()),
         "seed": args.seed,

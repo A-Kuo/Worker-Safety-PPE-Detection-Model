@@ -9,6 +9,8 @@ script does not start a run unless you omit ``--dry-run``.
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -34,6 +36,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--model", default=None, help="Override model weights / yaml")
     parser.add_argument("--data", default=None, help="Override data yaml")
     parser.add_argument("--epochs", type=int, default=None)
+    parser.add_argument(
+        "--fraction",
+        type=float,
+        default=None,
+        help="Train on only this fraction of the train set (smoke tests: 0.02).",
+    )
     parser.add_argument(
         "--batch",
         type=int,
@@ -73,6 +81,40 @@ def _subset_dirname(n: int) -> str:
     return f"combined_{n}"
 
 
+def verify_subset_paths(subset_yaml: Path) -> None:
+    """Fail if a subset's image lists point outside the dataset it was built from.
+
+    Ultralytics derives each label path from the listed image path, so a list that
+    escaped into raw/ (e.g. via a resolved symlink) trains on unremapped labels.
+    """
+    manifest_path = subset_yaml.parent / "subset_manifest.json"
+    if not manifest_path.exists():
+        return
+    source = json.loads(manifest_path.read_text(encoding="utf-8")).get("source")
+    if not source:
+        return
+    prefixes = {
+        os.path.normcase(os.path.abspath(source)) + os.sep,
+        os.path.normcase(os.path.realpath(source)) + os.sep,
+    }
+    for name in ("train.txt", "valid.txt", "test.txt"):
+        list_path = subset_yaml.parent / name
+        if not list_path.exists():
+            continue
+        with list_path.open(encoding="utf-8") as handle:
+            for i, line in enumerate(handle):
+                if i >= 500:
+                    break
+                entry = line.strip()
+                if entry and not any(os.path.normcase(os.path.abspath(entry)).startswith(p) for p in prefixes):
+                    raise SystemExit(
+                        f"{list_path} lists {entry}, which is outside the subset's recorded source "
+                        f"({source}). Its labels would not be the source dataset's remapped labels. "
+                        "Rebuild it: python scripts/make_subset.py --source data/processed/combined "
+                        f"--out {subset_yaml.parent}"
+                    )
+
+
 def resolve_subset_data(subset_size: int) -> Path:
     candidate = REPO_ROOT / "data" / "raw" / _subset_dirname(subset_size) / "data.yaml"
     if not candidate.exists():
@@ -82,6 +124,7 @@ def resolve_subset_data(subset_size: int) -> Path:
             f"  python scripts/make_subset.py --source data/processed/combined "
             f"--out data/raw/{_subset_dirname(subset_size)} --n {subset_size}"
         )
+    verify_subset_paths(candidate)
     return candidate
 
 
@@ -113,6 +156,8 @@ def apply_overrides(cfg: dict[str, Any], args: argparse.Namespace) -> tuple[str,
         cfg["data"] = args.data
     if args.epochs is not None:
         cfg["epochs"] = args.epochs
+    if args.fraction is not None:
+        cfg["fraction"] = args.fraction
     if args.batch is not None:
         cfg["batch"] = args.batch
     if args.device is not None:
