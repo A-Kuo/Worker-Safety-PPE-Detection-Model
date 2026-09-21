@@ -39,8 +39,15 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--data", type=Path, default=None)
     parser.add_argument("--split", default="test")
     parser.add_argument("--imgsz", type=int, default=640)
-    parser.add_argument("--conf", type=float, default=0.25)
-    parser.add_argument("--iou", type=float, default=0.5)
+    parser.add_argument(
+        "--conf", type=float, default=0.25,
+        help="Confidence floor. 0.25 is a deployment-style operating point and truncates the PR curve of "
+        "under-confident classes (e.g. no_vest); use 0.001 for mAP comparisons between models.",
+    )
+    parser.add_argument(
+        "--iou", type=float, default=0.5,
+        help="NMS IoU. Ultralytics' standard mAP protocol (and its training-time validation) uses 0.7.",
+    )
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "results" / "analysis" / "eval_combined.json")
     parser.add_argument("--skip-compliance", action="store_true")
     parser.add_argument("--max-compliance-images", type=int, default=64)

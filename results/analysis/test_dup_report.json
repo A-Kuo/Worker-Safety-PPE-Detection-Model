@@ -1,0 +1,12 @@
+{
+  "reference_splits": [
+    "train",
+    "valid"
+  ],
+  "max_bits": 6,
+  "test_images": 4423,
+  "exact_twins": 1633,
+  "near_duplicates": 2368,
+  "clean": 2055,
+  "near_duplicate_fraction": 0.5353832240560705
+}

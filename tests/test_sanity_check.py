@@ -53,3 +53,11 @@ def test_read_best_val_map50_rejects_unexpected_schema(tmp_path):
 def test_run_reports_a_missing_checkpoint(tmp_path):
     with pytest.raises(AssertionError, match="did not produce a checkpoint"):
         sanity_check.run("nope", project=tmp_path)
+
+
+def test_eval_uses_the_same_protocol_as_training_time_validation():
+    cmd = sanity_check.eval_command(Path("w.pt"), "test", Path("out.json"), data="d.yaml")
+    assert cmd[cmd.index("--conf") + 1] == "0.001"   # not eval.py's 0.25, which zeroes an under-confident model
+    assert cmd[cmd.index("--iou") + 1] == "0.7"
+    assert cmd[cmd.index("--data") + 1] == "d.yaml" and cmd[cmd.index("--split") + 1] == "test"
+    assert "--data" not in sanity_check.eval_command(Path("w.pt"), "test", Path("o.json"))

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -81,7 +82,10 @@ class OnnxRuntimeBackend(InferenceBackend):
         self.session = ort.InferenceSession(str(self.model_path), **session_kwargs)
         self.input_name = self.session.get_inputs()[0].name
         self.input_shape = self.session.get_inputs()[0].shape
-        self.class_names = class_names or {
+        # Prefer the class names Ultralytics embeds in the ONNX metadata. Falling back to
+        # UNIFIED_CLASS_NAMES *by index* is only right for a 14-class model already in unified
+        # order; a 2-class specialist (vest, no_vest) would otherwise decode as helmet/no_helmet.
+        self.class_names = class_names or _onnx_metadata_names(self.session) or {
             i: name for i, name in enumerate(UNIFIED_CLASS_NAMES)
         }
 
@@ -231,6 +235,18 @@ def _decode_yolo_onnx(
             )
         )
     return detections
+
+
+def _onnx_metadata_names(session: Any) -> dict[int, str] | None:
+    """Class names from the ONNX ``names`` metadata Ultralytics writes, or None if absent/unparseable."""
+    try:
+        raw = session.get_modelmeta().custom_metadata_map.get("names")
+        if not raw:
+            return None
+        parsed = ast.literal_eval(raw)
+        return {int(k): str(v) for k, v in parsed.items()}
+    except Exception:  # noqa: BLE001 - metadata is optional; fall back to the positional default
+        return None
 
 
 def _nms(xyxy: np.ndarray, scores: np.ndarray, iou_thresh: float) -> list[int]:

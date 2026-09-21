@@ -38,6 +38,8 @@ def build_detector(
     weights: str | Path | None = None,
     conf: float = 0.25,
     device: str | None = None,
+    class_conf: dict[str, float] | None = None,
+    specialist: str | Path | None = None,
 ):
     if PPEDetector is None:
         raise RuntimeError(
@@ -49,7 +51,16 @@ def build_detector(
         raise FileNotFoundError(
             f"Weights not found at {path}. Set PPE_WEIGHTS or pass a weights path."
         )
-    kwargs: dict = {"weights_path": str(path), "conf": float(conf)}
+    if class_conf is None:
+        from ppe.thresholds import parse_class_conf
+
+        class_conf = parse_class_conf(os.environ.get("PPE_CLASS_CONF"))
+    kwargs: dict = {"weights_path": str(path), "conf": float(conf), "class_conf": class_conf}
+    spec = specialist or os.environ.get("PPE_SPECIALIST")
+    if spec:
+        if not Path(spec).is_file():
+            raise FileNotFoundError(f"Vest specialist weights not found: {spec} (PPE_SPECIALIST)")
+        kwargs["specialist_weights"] = str(spec)
     chosen = device if device is not None else default_device()
     if chosen:
         kwargs["device"] = chosen

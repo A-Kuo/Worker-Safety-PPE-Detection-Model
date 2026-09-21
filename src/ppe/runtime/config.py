@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
+from ppe.thresholds import parse_class_conf
+
 
 @dataclass
 class ExecutionPolicy:
@@ -27,8 +29,12 @@ class ExecutionPolicy:
     prefer_onnx: bool = True
     imgsz: int = 640
     conf: float = 0.25
+    # Per-class overrides of ``conf``, e.g. {"no_vest": 0.10}; env PPE_CLASS_CONF="no_vest=0.10".
+    class_conf: dict[str, float] = field(default_factory=dict)
     # Optional explicit model path.
     model: str | None = None
+    # Optional vest specialist (2-class vest/no_vest, .onnx or .pt); env PPE_SPECIALIST.
+    specialist: str | None = None
     # OpenVINO EP device_type, e.g. "AUTO:NPU,GPU", "NPU", "GPU", "CPU".
     # Only applies when the openvino provider is selected; ignored otherwise.
     openvino_device_type: str | None = None
@@ -45,8 +51,10 @@ class ExecutionPolicy:
         prefer_onnx = _env_bool("PPE_PREFER_ONNX", True)
         imgsz = int(os.environ.get("PPE_IMGSZ", "640"))
         conf = float(os.environ.get("PPE_CONF", "0.25"))
+        class_conf = parse_class_conf(os.environ.get("PPE_CLASS_CONF"))
         model = os.environ.get("PPE_WEIGHTS") or os.environ.get("PPE_MODEL")
         openvino_device_type = os.environ.get("PPE_OPENVINO_DEVICE") or None
+        specialist = os.environ.get("PPE_SPECIALIST") or None
         policy = cls(
             providers=providers,
             npu_only=npu_only,
@@ -55,7 +63,9 @@ class ExecutionPolicy:
             prefer_onnx=prefer_onnx,
             imgsz=imgsz,
             conf=conf,
+            class_conf=class_conf,
             model=model,
+            specialist=specialist,
             openvino_device_type=openvino_device_type,
         )
         for key, value in overrides.items():

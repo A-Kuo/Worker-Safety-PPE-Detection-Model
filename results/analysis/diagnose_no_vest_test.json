@@ -1,0 +1,78 @@
+{
+  "runs\\train\\e0_n\\weights\\best.pt": {
+    "buckets": {
+      "hit>=0.25": 54,
+      "hit 0.05-0.25": 64,
+      "hit 0.01-0.05": 40,
+      "missed": 55,
+      "mislocalized": 10,
+      "other class": 2,
+      "flipped": 1
+    },
+    "sweep": [
+      {
+        "conf": 0.01,
+        "recall": 0.6991150442477876,
+        "false_boxes_per_100_negative_images": 44.0
+      },
+      {
+        "conf": 0.05,
+        "recall": 0.5221238938053098,
+        "false_boxes_per_100_negative_images": 13.666666666666666
+      },
+      {
+        "conf": 0.1,
+        "recall": 0.41150442477876104,
+        "false_boxes_per_100_negative_images": 9.333333333333334
+      },
+      {
+        "conf": 0.25,
+        "recall": 0.23893805309734514,
+        "false_boxes_per_100_negative_images": 3.3333333333333335
+      },
+      {
+        "conf": 0.4,
+        "recall": 0.1504424778761062,
+        "false_boxes_per_100_negative_images": 2.3333333333333335
+      }
+    ]
+  },
+  "models\\pretrained\\hexmon_vyra\\best_unified_order.pt": {
+    "buckets": {
+      "hit>=0.25": 104,
+      "hit 0.01-0.05": 22,
+      "hit 0.05-0.25": 49,
+      "missed": 37,
+      "mislocalized": 10,
+      "flipped": 2,
+      "other class": 2
+    },
+    "sweep": [
+      {
+        "conf": 0.01,
+        "recall": 0.7743362831858407,
+        "false_boxes_per_100_negative_images": 22.0
+      },
+      {
+        "conf": 0.05,
+        "recall": 0.6769911504424779,
+        "false_boxes_per_100_negative_images": 12.333333333333334
+      },
+      {
+        "conf": 0.1,
+        "recall": 0.6017699115044248,
+        "false_boxes_per_100_negative_images": 10.666666666666666
+      },
+      {
+        "conf": 0.25,
+        "recall": 0.46017699115044247,
+        "false_boxes_per_100_negative_images": 7.666666666666667
+      },
+      {
+        "conf": 0.4,
+        "recall": 0.19469026548672566,
+        "false_boxes_per_100_negative_images": 6.333333333333333
+      }
+    ]
+  }
+}

@@ -5,6 +5,11 @@ data/combined/
 data/hardhat/
 data/construction/
 
+# Kaggle/Colab working-dir dumps (multi-GB, and they contain a full nested .git) - never commit
+*.zip
+_output_/
+_output_*/
+
 # Ultralytics / experiment runs
 runs/
 

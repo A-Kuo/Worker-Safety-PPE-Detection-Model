@@ -26,6 +26,13 @@ if str(_SCRIPTS) not in sys.path:
 from _common import REPO_ROOT  # noqa: E402
 
 MAP50_KEY = "metrics/mAP50(B)"
+# Score with the same protocol Ultralytics' training-time validation uses (conf 0.001, NMS IoU 0.7).
+# eval.py's own defaults (conf 0.25, NMS IoU 0.5) truncate the PR curve, so a weakly-trained model
+# whose scores are all below 0.25 reads 0.000 there while its training-time val reads e.g. 0.4 -
+# the two numbers compared below would then disagree for a reason that has nothing to do with labels
+# (found in the Linux rehearsal: a healthy 1-epoch smoke run failed this check).
+EVAL_CONF = 0.001
+EVAL_NMS_IOU = 0.7
 # A mismatch only looks like a mismatch if the training-time val looked healthy.
 MIN_HEALTHY_VAL = 0.1
 AGREEMENT_RATIO = 0.5
@@ -59,6 +66,14 @@ def verdict(best_val: float, test: float) -> tuple[str, str]:
     return "pass", f"test mAP50 {test:.3f} and training-time val {best_val:.3f} agree; labels are consistent."
 
 
+def eval_command(weights: Path, split: str, out_json: Path, data: str | None = None) -> list[str]:
+    cmd = [sys.executable, str(_SCRIPTS / "eval.py"), "--weights", str(weights), "--split", split,
+           "--out", str(out_json), "--conf", str(EVAL_CONF), "--iou", str(EVAL_NMS_IOU)]
+    if data:
+        cmd += ["--data", data]
+    return cmd
+
+
 def run(exp: str, project: Path | None = None, split: str = "test", data: str | None = None) -> str:
     project = Path(project) if project else REPO_ROOT / "runs" / "train"
     run_dir = project / exp
@@ -70,10 +85,7 @@ def run(exp: str, project: Path | None = None, split: str = "test", data: str | 
 
     out_json = REPO_ROOT / "results" / "analysis" / f"eval_{exp}.json"
     log_path = run_dir / "sanity_eval.log"
-    cmd = [sys.executable, str(_SCRIPTS / "eval.py"), "--weights", str(weights), "--split", split,
-           "--out", str(out_json)]
-    if data:
-        cmd += ["--data", data]
+    cmd = eval_command(weights, split, out_json, data)
     with log_path.open("w", encoding="utf-8") as log:
         proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, check=False)
     tail = "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-25:])

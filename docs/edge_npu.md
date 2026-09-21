@@ -80,6 +80,8 @@ python -m pip install -e ".[edge]"
 | `PPE_ALLOW_TORCH` | Opt-in Ultralytics `.pt` backend |
 | `PPE_PREFER_ONNX` | Resolve `.onnx` before `.pt` (default true) |
 | `PPE_IMGSZ` / `PPE_CONF` | Inference size / confidence |
+| `PPE_CLASS_CONF` | Per-class confidence overrides, e.g. `no_vest=0.10,no_helmet=0.15`. The backend is asked for the lowest threshold in play and results are filtered per class, so a lower bar for one weak class doesn't loosen the rest. See `docs/experiments.md` ("Lifting `no_vest`") for measured recall vs false-positive tradeoffs. |
+| `PPE_SPECIALIST` | Path to the 2-class vest specialist (`.onnx`, or `.pt` with `PPE_ALLOW_TORCH=1`). Its `vest`/`no_vest` detections replace the main model's; every other class is untouched. Costs a second forward pass. Class names are read from the ONNX metadata Ultralytics embeds, so export it with `ppe export`. See `docs/experiments.md` ("Lifting `no_vest`"). |
 | `PPE_OPENVINO_DEVICE` | OpenVINO EP `device_type`, e.g. `AUTO:NPU,GPU` (only applies when `openvino` is an active provider) |
 
 ## Accuracy note

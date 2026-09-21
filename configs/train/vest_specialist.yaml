@@ -1,0 +1,27 @@
+# Vest specialist: 2 classes (vest, no_vest), trained ONLY on images where vest status was annotated.
+#
+# Why separate from the 14-class model: Combined merges sources that each annotated only some classes,
+# so 84% of worker images carry no vest label. The 14-class model treats those workers as background
+# and under-scores no_vest (only ~24% of true no_vest boxes clear conf 0.25). Fine-tuning the 14-class
+# model on the vest-annotated images instead makes it forget every class not labeled there (helmet
+# 0.82 -> 0.00 in a CPU proof of concept). A specialist has nothing else to forget; at inference its
+# vest/no_vest replace the main model's (src/ppe/specialist.py).
+#
+# Data: python scripts/make_class_subset.py --classes vest no_vest --out data/raw/vest_annotated
+#       python scripts/dedupe_test.py --subset data/raw/vest_annotated/test.txt --out-list data/raw/vest_annotated/test_clean.txt --out-yaml data/raw/vest_annotated/data_clean.yaml
+#       python scripts/make_vest_specialist_data.py
+# Starting from the E0 checkpoint transfers its PPE features (only the 2-class head is new):
+#   python scripts/train.py --exp vest_specialist --model runs/train/e0_n/weights/best.pt
+# yolov8n.pt (COCO) is the default so this config also works on a fresh Kaggle checkout.
+experiment: vest_specialist
+model: yolov8n.pt
+data: data/processed/vest_specialist/data.yaml
+epochs: 30
+imgsz: 640
+batch: 16
+seed: 42
+cos_lr: true
+patience: 10
+pretrained: true
+optimizer: auto
+close_mosaic: 5

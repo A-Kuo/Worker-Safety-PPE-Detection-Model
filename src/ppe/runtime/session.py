@@ -12,6 +12,8 @@ from ppe.compliance import Detection, WorkerCompliance, associate_ppe_to_persons
 from ppe.runtime.backends import InferenceBackend, build_backend
 from ppe.runtime.config import ExecutionPolicy, resolve_model_path
 from ppe.runtime.providers import provider_status, resolve_providers
+from ppe.specialist import merge_detections
+from ppe.thresholds import effective_floor, filter_detections
 
 
 @dataclass
@@ -21,9 +23,14 @@ class EdgeSession:
     backend: InferenceBackend
     policy: ExecutionPolicy
     model_path: Path
+    specialist_backend: InferenceBackend | None = None
 
     def predict(self, image_bgr: np.ndarray) -> list[Detection]:
-        return self.backend.predict(image_bgr, conf=self.policy.conf)
+        floor = effective_floor(self.policy.conf, self.policy.class_conf)
+        detections = self.backend.predict(image_bgr, conf=floor)
+        if self.specialist_backend is not None:
+            detections = merge_detections(detections, self.specialist_backend.predict(image_bgr, conf=floor))
+        return filter_detections(detections, self.policy.conf, self.policy.class_conf)
 
     def predict_and_comply(
         self, image_bgr: np.ndarray
@@ -41,6 +48,8 @@ class EdgeSession:
                 "prefer_onnx": self.policy.prefer_onnx,
                 "imgsz": self.policy.imgsz,
                 "conf": self.policy.conf,
+                "class_conf": dict(self.policy.class_conf),
+                "specialist": self.policy.specialist,
             },
             "backend": self.backend.info(),
             "provider_catalog": provider_status(),
@@ -80,7 +89,15 @@ def open_session(
                 path = cand
                 break
     backend = build_backend(path, pol)
-    return EdgeSession(backend=backend, policy=pol, model_path=path)
+    specialist_backend = None
+    if pol.specialist:
+        spec_path = Path(pol.specialist)
+        if not spec_path.is_absolute():
+            spec_path = root / spec_path
+        if not spec_path.is_file():
+            raise FileNotFoundError(f"Vest specialist not found: {spec_path} (PPE_SPECIALIST / policy.specialist)")
+        specialist_backend = build_backend(spec_path, pol)
+    return EdgeSession(backend=backend, policy=pol, model_path=path, specialist_backend=specialist_backend)
 
 
 def describe_runtime() -> dict[str, Any]:
