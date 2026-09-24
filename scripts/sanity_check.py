@@ -24,6 +24,7 @@ if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 from _common import REPO_ROOT  # noqa: E402
+from package_deliverables import auto_package  # noqa: E402
 
 MAP50_KEY = "metrics/mAP50(B)"
 # Score with the same protocol Ultralytics' training-time validation uses (conf 0.001, NMS IoU 0.7).
@@ -107,8 +108,13 @@ def run(exp: str, project: Path | None = None, split: str = "test", data: str | 
             head = name.read_text(encoding="utf-8").splitlines()[:2]
             print(f"\nDIAGNOSTIC {name} (entries must live under data/processed/, never data/raw/combined/):")
             print("\n".join(head))
+        # Keep the evidence: stage (never prune) so the checkpoint can be inspected after the session.
+        auto_package(exp, REPO_ROOT, prune_after=False, strict=False)
         raise AssertionError(message + " Do NOT copy this checkpoint off the VM — investigate first.")
     print(("\nWARNING: " if status == "warn" else "\nSanity check passed - ") + message)
+    # On Kaggle: package the deliverables and leave only them in /kaggle/working (no-op elsewhere
+    # and for the smoke run). Raises if best.pt / the eval JSON are missing.
+    auto_package(exp, REPO_ROOT, prune_after=True, strict=True)
     return status
 
 

@@ -217,6 +217,10 @@ def main() -> int:
 
     model = YOLO(model_name)
     model.train(**train_kwargs)
+    # On Kaggle, stage the weights into /kaggle/working/deliverables_<name> right away (no-op elsewhere).
+    from package_deliverables import auto_package  # noqa: E402
+
+    auto_package(str(train_kwargs.get("name") or args.exp), REPO_ROOT, prune_after=False, strict=False)
     return 0
 
 
