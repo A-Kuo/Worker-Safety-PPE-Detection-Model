@@ -4,9 +4,9 @@
     "valid"
   ],
   "max_bits": 6,
-  "test_images": 4423,
-  "exact_twins": 1633,
-  "near_duplicates": 2368,
-  "clean": 2055,
-  "near_duplicate_fraction": 0.5353832240560705
+  "test_images": 1974,
+  "exact_twins": 584,
+  "near_duplicates": 786,
+  "clean": 1188,
+  "near_duplicate_fraction": 0.3981762917933131
 }

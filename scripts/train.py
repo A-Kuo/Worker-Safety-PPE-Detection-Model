@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CLI wrapper around Ultralytics ``YOLO.train`` for the E0–E4 configs.
 
-Reads ``configs/train/{e0_n,e1_s,e2_focal,e3_augs,e4_full44k,vest_specialist}.yaml``.
+Reads ``configs/train/{e0_n,e1_s,e2_focal,e3_augs,e4_full44k,vest_specialist,helmet_specialist}.yaml``.
 Resume-friendly. ``--dry-run`` prints the resolved kwargs and exits - this
 script does not start a run unless you omit ``--dry-run``.
 """
@@ -21,7 +21,7 @@ if str(_SCRIPTS) not in sys.path:
 
 from _common import REPO_ROOT, first_existing, load_yaml, validate_train_kwargs  # noqa: E402
 
-EXPERIMENTS = ("e0_n", "e1_s", "e2_focal", "e3_augs", "e4_full44k", "vest_specialist")
+EXPERIMENTS = ("e0_n", "e1_s", "e2_focal", "e3_augs", "e4_full44k", "vest_specialist", "helmet_specialist")
 CONFIG_DIR = REPO_ROOT / "configs" / "train"
 # Keys that are documentation / our CLI, not Ultralytics train() kwargs.
 META_KEYS = {"experiment", "subset_size"}

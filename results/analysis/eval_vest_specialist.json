@@ -1,0 +1,38 @@
+{
+  "domain": "combined",
+  "weights": "/kaggle/working/ppe/runs/train/vest_specialist/weights/best.pt",
+  "data": "/kaggle/working/ppe/data/processed/vest_specialist/data.yaml",
+  "split": "test",
+  "metrics": {
+    "precision": 0.7935778062522176,
+    "recall": 0.7821518632670216,
+    "map50": 0.837182432105583,
+    "map50_95": 0.5550253176363952,
+    "per_class": [
+      {
+        "id": 0,
+        "name": "vest",
+        "precision": 0.9125537606423788,
+        "recall": 0.8433734939759037,
+        "f1": 0.8766008404159321,
+        "map50": 0.9187577599602401,
+        "map50_95": 0.7044742994920911
+      },
+      {
+        "id": 1,
+        "name": "no_vest",
+        "precision": 0.6746018518620566,
+        "recall": 0.7209302325581395,
+        "f1": 0.6969970456094886,
+        "map50": 0.7556071042509259,
+        "map50_95": 0.4055763357806993
+      }
+    ]
+  },
+  "compliance": {
+    "images": 64,
+    "workers": 0,
+    "workers_with_missing_ppe": 0,
+    "missing_counts": {}
+  }
+}

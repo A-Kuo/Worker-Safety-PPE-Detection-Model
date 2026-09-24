@@ -1,0 +1,18 @@
+# Helmet specialist: 2 classes (helmet, no_helmet), trained ONLY on images that annotate helmets.
+#
+# Same recipe and reason as vest_specialist.yaml: Combined merges sources that each annotated only some
+# classes, so an unlabeled head is trained as background and E0 under-scores no_helmet (test mAP50
+# 0.536, recall 0.598). A specialist has nothing else to forget; at inference its helmet/no_helmet
+# replace the main model's. Data is built by: python scripts/prepare_specialist.py --exp helmet_specialist
+experiment: helmet_specialist
+model: yolov8n.pt
+data: data/processed/helmet_specialist/data.yaml
+epochs: 30
+imgsz: 640
+batch: 16
+seed: 42
+cos_lr: true
+patience: 10
+pretrained: true
+optimizer: auto
+close_mosaic: 5

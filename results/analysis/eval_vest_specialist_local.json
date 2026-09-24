@@ -1,0 +1,32 @@
+{
+  "domain": "combined",
+  "weights": "C:\\GitHub\\Worker Safety PPE Detection Model\\runs\\train\\vest_specialist\\weights\\best.pt",
+  "data": "C:\\GitHub\\Worker Safety PPE Detection Model\\data\\processed\\vest_specialist\\data.yaml",
+  "split": "test",
+  "metrics": {
+    "precision": 0.7935771410786284,
+    "recall": 0.7821518632670216,
+    "map50": 0.837182432105583,
+    "map50_95": 0.5550253176363952,
+    "per_class": [
+      {
+        "id": 0,
+        "name": "vest",
+        "precision": 0.9125534281675263,
+        "recall": 0.8433734939759037,
+        "f1": 0.8766006870193316,
+        "map50": 0.9187577599602401,
+        "map50_95": 0.7044742994920911
+      },
+      {
+        "id": 1,
+        "name": "no_vest",
+        "precision": 0.6746008539897306,
+        "recall": 0.7209302325581395,
+        "f1": 0.6969965129960627,
+        "map50": 0.7556071042509259,
+        "map50_95": 0.4055763357806993
+      }
+    ]
+  }
+}

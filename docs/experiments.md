@@ -129,10 +129,13 @@ Scored on the 145-image deduplicated vest-annotated test split (43 `no_vest` and
 | E0 (14-class) | 0.373 | 0.856 |
 | Hexmon raw | 0.624 | 0.904 |
 | 14-class fine-tune PoC | 0.583 | 0.871 |
-| Vest specialist (CPU, E0-backbone init, 15 epochs) | 0.796 | 0.913 |
+| Vest specialist, CPU proof (E0-backbone init, 15 epochs) | 0.811 | 0.916 |
+| **Vest specialist, Kaggle T4 (COCO init, 30 epochs)** | **0.756** | **0.919** |
+
+The two specialists differ by 0.055 on `no_vest`, which is within noise for 43 boxes; both are far above the 14-class models. Validation split (1,703 boxes, 411 `no_vest`) for the GPU run: `no_vest` 0.892, `vest` 0.906, overall 0.899 - the clean test is harder because near-duplicates were removed from it.
 
 Caveats that matter when reading these:
 
 - **Protocol.** `eval.py` defaults to conf 0.25 / IoU 0.5, a deployment operating point. It truncates the PR curve of under-confident classes: the same models read 0.185 / 0.414 / 0.739 on `no_vest` there. Compare only under one protocol; `scripts/sanity_check.py` uses the standard one.
 - **Near-duplicates.** 54% of the 4,423 Combined test images have a near-duplicate (64-bit dHash, <= 6 bits) in train/valid. This does **not** move the aggregate headline (E0 0.666 -> 0.675, Hexmon 0.747 -> 0.753 on the 2,055 clean images), but it does inflate models fine-tuned on the 63%-duplicated vest subset (a `no_vest` fine-tune read 0.752 contaminated vs 0.541 clean). All specialist numbers above use the clean list.
-- The CPU checkpoint is a proof of the approach; the shipped specialist comes from the Kaggle GPU run (`EXP = "vest_specialist"` in `notebooks/train_colab_kaggle.ipynb`), to be re-scored the same way.
+- The shipped specialist is the Kaggle GPU run (`EXP = "vest_specialist"` in `notebooks/train_colab_kaggle.ipynb`, weights `runs/train/vest_specialist/weights/best.pt`); its Kaggle test score (0.837 overall) was reproduced locally. The CPU run is kept at `runs/train/vest_specialist_cpu/`.

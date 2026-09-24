@@ -1,0 +1,39 @@
+{
+  "runs\\train\\vest_specialist\\weights\\best.pt": {
+    "buckets": {
+      "hit>=0.25": 198,
+      "hit 0.01-0.05": 7,
+      "hit 0.05-0.25": 11,
+      "mislocalized": 6,
+      "flipped": 2,
+      "missed": 2
+    },
+    "sweep": [
+      {
+        "conf": 0.01,
+        "recall": 0.9557522123893806,
+        "false_boxes_per_100_negative_images": 713.6666666666666
+      },
+      {
+        "conf": 0.05,
+        "recall": 0.9247787610619469,
+        "false_boxes_per_100_negative_images": 292.0
+      },
+      {
+        "conf": 0.1,
+        "recall": 0.9070796460176991,
+        "false_boxes_per_100_negative_images": 216.0
+      },
+      {
+        "conf": 0.25,
+        "recall": 0.8761061946902655,
+        "false_boxes_per_100_negative_images": 162.0
+      },
+      {
+        "conf": 0.4,
+        "recall": 0.827433628318584,
+        "false_boxes_per_100_negative_images": 133.66666666666666
+      }
+    ]
+  }
+}
