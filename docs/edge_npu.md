@@ -12,6 +12,15 @@ Default runtime is **ONNX Runtime** with a vendor-agnostic execution-provider re
 | Quantization | Dynamic INT8 by default; optional static with `--calibration` |
 | Boots | Still future work (no class in Combined) |
 
+## Soft vs hard NPU mode
+
+| Mode | Env | Behavior |
+|---|---|---|
+| Soft (default) | `PPE_NPU_ONLY=1` | Prefer NPU EPs; skip CUDA/TensorRT; **CPU still allowed** as fallback |
+| Hard | `PPE_NPU_ONLY=1` **and** `PPE_ALLOW_CPU_FALLBACK=0` | Must resolve a real NPU EP (`openvino` / `qnn` / …) or **raise** before the session opens — no silent CPU |
+
+CI runs `python scripts/smoke_edge.py --require-npu`: on CPU-only runners that proves the hard gate refuses; on a Lunar Lake box with `onnxruntime-openvino` it exercises the OpenVINO EP.
+
 ## Provider registry
 
 Keys (preference for auto-select: NPU → GPU → CPU):
@@ -55,12 +64,15 @@ python scripts/quantize_onnx.py --model models/best.onnx
 # optional static:
 # python scripts/quantize_onnx.py --model models/best.onnx --calibration data/calib --static
 
-# 3) Bench (synthetic frame if --source omitted)
-ppe bench --weights models/best.onnx
-ppe bench --weights models/best.int8.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg
+# 3) Portable edge smoke (ORT + hard-NPU gate; works on CPU-only CI too)
+python scripts/smoke_edge.py --require-npu
 
-# 4) Single-image predict + compliance
-ppe predict --weights models/best.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg
+# 4) Bench (synthetic frame if --source omitted)
+ppe bench --weights models/best.onnx --npu-only
+ppe bench --weights models/best.int8.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only --providers openvino,cpu --openvino-device AUTO:NPU,GPU
+
+# 5) Single-image predict + compliance
+ppe predict --weights models/best.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only
 ```
 
 Install the console script once:

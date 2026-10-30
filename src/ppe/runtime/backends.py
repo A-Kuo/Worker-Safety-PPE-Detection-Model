@@ -11,7 +11,12 @@ import numpy as np
 
 from ppe.compliance import Detection
 from ppe.runtime.config import ExecutionPolicy
-from ppe.runtime.providers import key_for_ort_name, provider_options_for, resolve_providers
+from ppe.runtime.providers import (
+    key_for_ort_name,
+    provider_options_for,
+    require_npu_providers,
+    resolve_providers,
+)
 from ppe.schema import (
     COMBINED_RAW_TO_UNIFIED,
     CONSTRUCTION_TO_UNIFIED,
@@ -64,10 +69,16 @@ class OnnxRuntimeBackend(InferenceBackend):
             npu_only=policy.npu_only,
             allow_cpu_fallback=policy.allow_cpu_fallback,
         )
+        require_npu_providers(
+            self.providers,
+            npu_only=policy.npu_only,
+            allow_cpu_fallback=policy.allow_cpu_fallback,
+        )
         if not self.providers:
             raise RuntimeError(
                 "No ORT execution providers available. Install onnxruntime "
-                "and/or a vendor EP package."
+                "and/or a vendor EP package"
+                + (" (NPU EP required — CPU fallback is disabled)." if policy.npu_only else ".")
             )
         provider_options = [
             provider_options_for(

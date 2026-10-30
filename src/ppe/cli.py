@@ -166,16 +166,24 @@ def _policy_from_args(args: argparse.Namespace) -> "ExecutionPolicy":
     from ppe.runtime import ExecutionPolicy
     from ppe.runtime.config import _parse_specialist_paths
 
+    # Only override env when the flag was actually passed — empty --providers
+    # must not wipe PPE_PROVIDERS / OpenVINO NPU pins from the environment.
+    overrides: dict = {
+        "imgsz": args.imgsz,
+        "conf": args.conf,
+    }
+    if args.providers:
+        overrides["providers"] = tuple(p.strip() for p in args.providers.split(",") if p.strip())
+    if args.npu_only:
+        overrides["npu_only"] = True
+    if args.allow_torch:
+        overrides["allow_torch"] = True
+    if getattr(args, "openvino_device", None):
+        overrides["openvino_device_type"] = args.openvino_device
     specialists = _parse_specialist_paths(getattr(args, "specialists", "") or None, None)
-    return ExecutionPolicy.from_env(
-        providers=tuple(args.providers.split(",")) if args.providers else (),
-        npu_only=args.npu_only,
-        allow_torch=args.allow_torch,
-        imgsz=args.imgsz,
-        conf=args.conf,
-        openvino_device_type=args.openvino_device or None,
-        specialists=specialists or None,
-    )
+    if specialists:
+        overrides["specialists"] = specialists
+    return ExecutionPolicy.from_env(**overrides)
 
 
 def cmd_predict(args: argparse.Namespace) -> int:

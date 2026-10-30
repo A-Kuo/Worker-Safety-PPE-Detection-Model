@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from ppe.runtime.config import ExecutionPolicy, pin_providers
 from ppe.runtime.providers import (
     PROVIDER_REGISTRY,
@@ -62,6 +64,50 @@ def test_npu_only_skips_cuda(monkeypatch):
     providers = resolve_providers(None, npu_only=True)
     assert "CUDAExecutionProvider" not in providers
     assert providers == ["CPUExecutionProvider"]
+
+
+def test_hard_npu_mode_refuses_silent_cpu(monkeypatch):
+    from ppe.runtime.providers import require_npu_providers
+
+    monkeypatch.setattr(
+        "ppe.runtime.providers.available_ort_names",
+        lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"],
+    )
+    # Soft: still gets CPU. Hard: empty list — never invent CPU when fallback is off.
+    assert resolve_providers(None, npu_only=True, allow_cpu_fallback=True) == ["CPUExecutionProvider"]
+    assert resolve_providers(None, npu_only=True, allow_cpu_fallback=False) == []
+    with pytest.raises(RuntimeError, match="NPU execution required"):
+        require_npu_providers([], npu_only=True, allow_cpu_fallback=False)
+
+
+def test_hard_npu_mode_accepts_openvino(monkeypatch):
+    from ppe.runtime.providers import has_npu_provider, require_npu_providers
+
+    monkeypatch.setattr(
+        "ppe.runtime.providers.available_ort_names",
+        lambda: ["OpenVINOExecutionProvider", "CPUExecutionProvider"],
+    )
+    providers = resolve_providers(["openvino"], npu_only=True, allow_cpu_fallback=False)
+    assert providers == ["OpenVINOExecutionProvider"]
+    assert has_npu_provider(providers)
+    require_npu_providers(providers, npu_only=True, allow_cpu_fallback=False)
+
+
+def test_backend_raises_in_hard_npu_mode_without_npu_ep(monkeypatch, tmp_path):
+    import onnxruntime as ort
+
+    from ppe.runtime.backends import OnnxRuntimeBackend
+
+    monkeypatch.setattr(ort, "InferenceSession", _FakeSession)
+    monkeypatch.setattr(
+        "ppe.runtime.providers.available_ort_names",
+        lambda: ["CPUExecutionProvider"],
+    )
+    model_path = tmp_path / "model.onnx"
+    model_path.write_bytes(b"")
+    policy = ExecutionPolicy(npu_only=True, allow_cpu_fallback=False, providers=("openvino",))
+    with pytest.raises(RuntimeError, match="NPU execution required"):
+        OnnxRuntimeBackend(model_path, policy)
 
 
 def test_policy_from_env(monkeypatch):
