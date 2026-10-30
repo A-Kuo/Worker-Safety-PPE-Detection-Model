@@ -8,7 +8,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+# ONNX / INT8 first so the demo prefers the NPU edge path when artifacts exist.
 DEFAULT_WEIGHT_CANDIDATES = (
+    REPO_ROOT / "models" / "best.int8.onnx",
+    REPO_ROOT / "models" / "best.onnx",
+    REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.int8.onnx",
+    REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.onnx",
     REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
     REPO_ROOT / "models" / "best.pt",
 )
@@ -26,8 +31,8 @@ def ensure_src_on_path() -> None:
             sys.path.insert(0, path)
 
 
-def resolve_weights_path(explicit: str | None = None) -> Path:
-    """Resolve weights: explicit arg, then ``PPE_WEIGHTS``, then baseline/legacy paths."""
+def resolve_weights_path(explicit: str | None = None, *, prefer_onnx: bool = True) -> Path:
+    """Resolve weights: explicit arg, then ``PPE_WEIGHTS``, then ONNX-first defaults."""
     if explicit:
         path = Path(explicit).expanduser()
         return path if path.is_absolute() else (REPO_ROOT / path)
@@ -35,10 +40,16 @@ def resolve_weights_path(explicit: str | None = None) -> Path:
     if env:
         path = Path(env).expanduser()
         return path if path.is_absolute() else (REPO_ROOT / path)
-    for candidate in DEFAULT_WEIGHT_CANDIDATES:
+    candidates = DEFAULT_WEIGHT_CANDIDATES
+    if not prefer_onnx:
+        # Flip: .pt before .onnx siblings when torch is forced.
+        pt = [c for c in candidates if c.suffix.lower() in {".pt", ".pth"}]
+        onnx = [c for c in candidates if c.suffix.lower() == ".onnx"]
+        candidates = tuple(pt + onnx)
+    for candidate in candidates:
         if candidate.is_file():
             return candidate
-    return DEFAULT_WEIGHT_CANDIDATES[0]
+    return DEFAULT_WEIGHT_CANDIDATES[-2]  # baseline .pt as conventional fallback
 
 
 ensure_src_on_path()

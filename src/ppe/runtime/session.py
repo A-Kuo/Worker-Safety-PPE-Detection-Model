@@ -38,6 +38,15 @@ class EdgeSession:
         dets = self.predict(image_bgr)
         return dets, associate_ppe_to_persons(dets)
 
+    def predict_and_annotate(
+        self, image_bgr: np.ndarray
+    ) -> tuple[np.ndarray, list[WorkerCompliance]]:
+        """Return annotated BGR frame + compliance (demo / camera path)."""
+        from ppe.annotate import annotate_frame
+
+        dets, workers = self.predict_and_comply(image_bgr)
+        return annotate_frame(image_bgr, dets, workers), workers
+
     def info(self) -> dict[str, Any]:
         return {
             "model_path": str(self.model_path),
