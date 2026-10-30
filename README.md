@@ -134,6 +134,7 @@ Per-class Ultralytics val needs Construction images on disk (`python scripts/eva
 | `scripts/eval.py` | In-domain Combined eval |
 | `scripts/eval_cross_domain.py` | Combined / Construction (mapped) / HHU tables |
 | `scripts/calibrate.py` | ECE, Brier, `no_*` confidence sweeps (target R ≥ 0.90) |
+| `scripts/validate_accuracy.py` | Offline product-bar gate on recorded `results/analysis/eval_*.json` (vest/helmet/goggles) |
 | `scripts/benchmark.py` + `export_onnx.py` / `quantize_onnx.py` | Latency / FPS; ONNX + INT8 edge path |
 | `ppe` CLI (`providers` / `export` / `quantize` / `bench` / `predict`) | Vendor-agnostic ORT EP registry — [docs/edge_npu.md](docs/edge_npu.md) |
 
@@ -234,9 +235,12 @@ python scripts/analyze_distribution.py
 python scripts/train.py --exp e0_n
 python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e0_n/weights/best.pt
+python scripts/validate_accuracy.py   # product bars vs results/analysis/eval_*.json
 # Edge path until Combined E4 exists — use inherited Construction weights:
 python scripts/export_onnx.py --weights baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
 python scripts/quantize_onnx.py --model models/best.onnx
+# Class-pair specialists (vest / helmet) export to ONNX and attach on NPU via PPE_SPECIALISTS:
+# ppe export --weights runs/train/vest_specialist/weights/best.pt --out models/vest_specialist.onnx
 ppe providers
 ppe bench --weights models/best.onnx
 # Then launch app/ (see §7)

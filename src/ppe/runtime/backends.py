@@ -123,6 +123,8 @@ class TorchBackend(InferenceBackend):
         self.model_path = Path(model_path)
         self.policy = policy
         self.model = YOLO(str(self.model_path))
+        # Same shape as OnnxRuntimeBackend.class_names so specialist replace-sets resolve uniformly.
+        self.class_names = {int(k): str(v) for k, v in dict(self.model.names).items()}
 
     def predict(self, image_bgr: np.ndarray, *, conf: float) -> list[Detection]:
         results = self.model.predict(
@@ -139,6 +141,7 @@ class TorchBackend(InferenceBackend):
             "model": str(self.model_path),
             "imgsz": self.policy.imgsz,
             "gated": True,
+            "class_names": dict(self.class_names),
         }
 
 
