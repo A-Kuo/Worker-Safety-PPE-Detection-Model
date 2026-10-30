@@ -88,17 +88,10 @@ def cmd_bench(args: argparse.Namespace) -> int:
     import cv2
     import numpy as np
 
-    from ppe.runtime import ExecutionPolicy, open_session
+    from ppe.runtime import open_session
 
     root = _repo_root()
-    policy = ExecutionPolicy.from_env(
-        providers=tuple(args.providers.split(",")) if args.providers else (),
-        npu_only=args.npu_only,
-        allow_torch=args.allow_torch,
-        imgsz=args.imgsz,
-        conf=args.conf,
-        openvino_device_type=args.openvino_device or None,
-    )
+    policy = _policy_from_args(args)
     session = open_session(args.weights, policy=policy, repo_root=root)
     print(json.dumps(session.info(), indent=2, default=str))
 
@@ -169,20 +162,37 @@ def cmd_bench(args: argparse.Namespace) -> int:
     return 0
 
 
+def _policy_from_args(args: argparse.Namespace) -> "ExecutionPolicy":
+    from ppe.runtime import ExecutionPolicy
+    from ppe.runtime.config import _parse_specialist_paths
+
+    # Only override env when the flag was actually passed — empty --providers
+    # must not wipe PPE_PROVIDERS / OpenVINO NPU pins from the environment.
+    overrides: dict = {
+        "imgsz": args.imgsz,
+        "conf": args.conf,
+    }
+    if args.providers:
+        overrides["providers"] = tuple(p.strip() for p in args.providers.split(",") if p.strip())
+    if args.npu_only:
+        overrides["npu_only"] = True
+    if args.allow_torch:
+        overrides["allow_torch"] = True
+    if getattr(args, "openvino_device", None):
+        overrides["openvino_device_type"] = args.openvino_device
+    specialists = _parse_specialist_paths(getattr(args, "specialists", "") or None, None)
+    if specialists:
+        overrides["specialists"] = specialists
+    return ExecutionPolicy.from_env(**overrides)
+
+
 def cmd_predict(args: argparse.Namespace) -> int:
     import cv2
 
-    from ppe.runtime import ExecutionPolicy, open_session
+    from ppe.runtime import open_session
 
     root = _repo_root()
-    policy = ExecutionPolicy.from_env(
-        providers=tuple(args.providers.split(",")) if args.providers else (),
-        npu_only=args.npu_only,
-        allow_torch=args.allow_torch,
-        imgsz=args.imgsz,
-        conf=args.conf,
-        openvino_device_type=args.openvino_device or None,
-    )
+    policy = _policy_from_args(args)
     session = open_session(args.weights, policy=policy, repo_root=root)
     src = Path(args.source)
     if not src.is_absolute():
@@ -240,6 +250,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="OpenVINO EP device_type, e.g. AUTO:NPU,GPU / NPU / GPU / CPU",
     )
+    p.add_argument(
+        "--specialists",
+        type=str,
+        default="",
+        help="Comma list of class-pair specialist ONNX/.pt paths (vest and/or helmet)",
+    )
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--warmup", type=int, default=5)
@@ -258,6 +274,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default="",
         help="OpenVINO EP device_type, e.g. AUTO:NPU,GPU / NPU / GPU / CPU",
+    )
+    p.add_argument(
+        "--specialists",
+        type=str,
+        default="",
+        help="Comma list of class-pair specialist ONNX/.pt paths (vest and/or helmet)",
     )
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--conf", type=float, default=0.25)

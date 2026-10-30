@@ -12,6 +12,15 @@ Default runtime is **ONNX Runtime** with a vendor-agnostic execution-provider re
 | Quantization | Dynamic INT8 by default; optional static with `--calibration` |
 | Boots | Still future work (no class in Combined) |
 
+## Soft vs hard NPU mode
+
+| Mode | Env | Behavior |
+|---|---|---|
+| Soft (default) | `PPE_NPU_ONLY=1` | Prefer NPU EPs; skip CUDA/TensorRT; **CPU still allowed** as fallback |
+| Hard | `PPE_NPU_ONLY=1` **and** `PPE_ALLOW_CPU_FALLBACK=0` | Must resolve a real NPU EP (`openvino` / `qnn` / …) or **raise** before the session opens — no silent CPU |
+
+CI runs `python scripts/smoke_edge.py --require-npu`: on CPU-only runners that proves the hard gate refuses; on a Lunar Lake box with `onnxruntime-openvino` it exercises the OpenVINO EP.
+
 ## Provider registry
 
 Keys (preference for auto-select: NPU → GPU → CPU):
@@ -55,12 +64,15 @@ python scripts/quantize_onnx.py --model models/best.onnx
 # optional static:
 # python scripts/quantize_onnx.py --model models/best.onnx --calibration data/calib --static
 
-# 3) Bench (synthetic frame if --source omitted)
-ppe bench --weights models/best.onnx
-ppe bench --weights models/best.int8.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg
+# 3) Portable edge smoke (ORT + hard-NPU gate; works on CPU-only CI too)
+python scripts/smoke_edge.py --require-npu
 
-# 4) Single-image predict + compliance
-ppe predict --weights models/best.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg
+# 4) Bench (synthetic frame if --source omitted)
+ppe bench --weights models/best.onnx --npu-only
+ppe bench --weights models/best.int8.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only --providers openvino,cpu --openvino-device AUTO:NPU,GPU
+
+# 5) Single-image predict + compliance
+ppe predict --weights models/best.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only
 ```
 
 Install the console script once:
@@ -81,8 +93,30 @@ python -m pip install -e ".[edge]"
 | `PPE_PREFER_ONNX` | Resolve `.onnx` before `.pt` (default true) |
 | `PPE_IMGSZ` / `PPE_CONF` | Inference size / confidence |
 | `PPE_CLASS_CONF` | Per-class confidence overrides, e.g. `no_vest=0.10,no_helmet=0.15`. The backend is asked for the lowest threshold in play and results are filtered per class, so a lower bar for one weak class doesn't loosen the rest. See `docs/experiments.md` ("Lifting `no_vest`") for measured recall vs false-positive tradeoffs. |
-| `PPE_SPECIALIST` | Path to the 2-class vest specialist (`.onnx`, or `.pt` with `PPE_ALLOW_TORCH=1`). Its `vest`/`no_vest` detections replace the main model's; every other class is untouched. Costs a second forward pass. Class names are read from the ONNX metadata Ultralytics embeds, so export it with `ppe export`. See `docs/experiments.md` ("Lifting `no_vest`"). |
+| `PPE_SPECIALIST` | Single specialist path (legacy). Prefer `PPE_SPECIALISTS` when attaching more than one. |
+| `PPE_SPECIALISTS` | Comma-separated class-pair specialists (`.onnx` preferred for NPU, or `.pt` with `PPE_ALLOW_TORCH=1`). Each specialist replaces only its owned pair (`vest`/`no_vest` and/or `helmet`/`no_helmet`); pairs are disjoint so both can run on the same frame. Each costs an extra forward pass on the same ORT providers as the main model (OpenVINO NPU included). Class names come from ONNX metadata — export with `ppe export`. See `docs/experiments.md`. |
 | `PPE_OPENVINO_DEVICE` | OpenVINO EP `device_type`, e.g. `AUTO:NPU,GPU` (only applies when `openvino` is an active provider) |
+
+## Specialists on NPU
+
+Accuracy lifts for vest / helmet ship as **extra ONNX graphs**, not a retrained 14-class head — so the NPU path stays ONNX-first:
+
+```powershell
+# After a specialist training run (vest and/or helmet):
+ppe export --weights runs/train/vest_specialist/weights/best.pt --out models/vest_specialist.onnx
+ppe export --weights runs/train/helmet_specialist/weights/best.pt --out models/helmet_specialist.onnx
+# optional INT8 (re-check P/R after quantize):
+python scripts/quantize_onnx.py --model models/vest_specialist.onnx
+python scripts/quantize_onnx.py --model models/helmet_specialist.onnx
+
+$env:PPE_PROVIDERS = "openvino,cpu"
+$env:PPE_OPENVINO_DEVICE = "AUTO:NPU,GPU"
+$env:PPE_SPECIALISTS = "models/vest_specialist.onnx,models/helmet_specialist.onnx"
+$env:PPE_CLASS_CONF = "no_vest=0.10,no_helmet=0.15"
+ppe predict --weights models/best.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only --providers openvino,cpu --openvino-device AUTO:NPU,GPU
+```
+
+`ppe predict` / `open_session` attach every specialist on the same provider list as the main model. If a `.pt` path is given while `PPE_PREFER_ONNX=1`, an adjacent `.onnx` / `.int8.onnx` sibling is preferred automatically.
 
 ## Accuracy note
 

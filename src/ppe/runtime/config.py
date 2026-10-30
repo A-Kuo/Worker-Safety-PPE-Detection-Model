@@ -33,8 +33,11 @@ class ExecutionPolicy:
     class_conf: dict[str, float] = field(default_factory=dict)
     # Optional explicit model path.
     model: str | None = None
-    # Optional vest specialist (2-class vest/no_vest, .onnx or .pt); env PPE_SPECIALIST.
+    # Optional class-pair specialists (vest/no_vest and/or helmet/no_helmet), ONNX preferred for NPU.
+    # ``specialist`` is the legacy single-path field (PPE_SPECIALIST); ``specialists`` is the full
+    # ordered list (PPE_SPECIALISTS comma-list, plus PPE_SPECIALIST if set and not already listed).
     specialist: str | None = None
+    specialists: tuple[str, ...] = ()
     # OpenVINO EP device_type, e.g. "AUTO:NPU,GPU", "NPU", "GPU", "CPU".
     # Only applies when the openvino provider is selected; ignored otherwise.
     openvino_device_type: str | None = None
@@ -55,6 +58,10 @@ class ExecutionPolicy:
         model = os.environ.get("PPE_WEIGHTS") or os.environ.get("PPE_MODEL")
         openvino_device_type = os.environ.get("PPE_OPENVINO_DEVICE") or None
         specialist = os.environ.get("PPE_SPECIALIST") or None
+        specialists = _parse_specialist_paths(
+            os.environ.get("PPE_SPECIALISTS"),
+            specialist,
+        )
         policy = cls(
             providers=providers,
             npu_only=npu_only,
@@ -65,13 +72,32 @@ class ExecutionPolicy:
             conf=conf,
             class_conf=class_conf,
             model=model,
-            specialist=specialist,
+            specialist=specialist or (specialists[0] if specialists else None),
+            specialists=specialists,
             openvino_device_type=openvino_device_type,
         )
         for key, value in overrides.items():
             if hasattr(policy, key) and value is not None:
                 setattr(policy, key, value)
+        # Keep specialists / specialist consistent after overrides.
+        if policy.specialists:
+            if not policy.specialist:
+                policy.specialist = policy.specialists[0]
+        elif policy.specialist:
+            policy.specialists = (policy.specialist,)
         return policy
+
+
+def _parse_specialist_paths(multi: str | None, single: str | None) -> tuple[str, ...]:
+    """Merge PPE_SPECIALISTS + PPE_SPECIALIST into an ordered, de-duplicated path tuple."""
+    paths: list[str] = []
+    for raw in (multi or "").split(","):
+        path = raw.strip()
+        if path and path not in paths:
+            paths.append(path)
+    if single and single.strip() and single.strip() not in paths:
+        paths.append(single.strip())
+    return tuple(paths)
 
 
 def _env_bool(name: str, default: bool) -> bool:

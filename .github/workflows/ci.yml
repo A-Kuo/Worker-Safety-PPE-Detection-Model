@@ -25,6 +25,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install -e ".[edge]"
     - name: Run Tests
       run: |
         pytest
+    - name: Edge / NPU-capable smoke (ONNX-first)
+      run: |
+        # Exports Construction baseline → models/best.onnx if needed, predicts on a
+        # real frame via ORT (CPU EP here; OpenVINO NPU on Lunar Lake). Also asserts
+        # hard NPU mode refuses silent CPU when no NPU EP is installed.
+        python scripts/smoke_edge.py --require-npu

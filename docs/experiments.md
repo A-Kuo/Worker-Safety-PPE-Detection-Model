@@ -61,7 +61,7 @@ HHU `head` → `no_helmet` is an **assumption** (implicit missing helmet). Score
 | Construction (mapped shared) | test | pending training run | pending training run | pending training run | pending training run | `SHARED_EVAL_CLASSES` |
 | HHU remapped | test | pending training run | pending training run | pending training run | pending training run | helmet / vest / person / no_helmet |
 
-Trade-off to write after numbers exist: one general Combined model vs a helmet-specialist. Do not train the specialist unless E4 finished early.
+Trade-off to write after numbers exist: one general Combined model vs a helmet-specialist. The helmet specialist is the active accuracy lever for priority-2 (hard hats); train it via `EXP=helmet_specialist` (same notebook path as vest).
 
 ## Calibration and `no_*` thresholds
 
@@ -139,3 +139,18 @@ Caveats that matter when reading these:
 - **Protocol.** `eval.py` defaults to conf 0.25 / IoU 0.5, a deployment operating point. It truncates the PR curve of under-confident classes: the same models read 0.185 / 0.414 / 0.739 on `no_vest` there. Compare only under one protocol; `scripts/sanity_check.py` uses the standard one.
 - **Near-duplicates.** 54% of the 4,423 Combined test images have a near-duplicate (64-bit dHash, <= 6 bits) in train/valid. This does **not** move the aggregate headline (E0 0.666 -> 0.675, Hexmon 0.747 -> 0.753 on the 2,055 clean images), but it does inflate models fine-tuned on the 63%-duplicated vest subset (a `no_vest` fine-tune read 0.752 contaminated vs 0.541 clean). All specialist numbers above use the clean list.
 - The shipped specialist is the Kaggle GPU run (`EXP = "vest_specialist"` in `notebooks/train_colab_kaggle.ipynb`, weights `runs/train/vest_specialist/weights/best.pt`); its Kaggle test score (0.837 overall) was reproduced locally. The CPU run is kept at `runs/train/vest_specialist_cpu/`.
+- **Product bar.** Vest / no_vest still need **95%+ P and R**. The GPU specialist clears mAP but not the precision bar on `no_vest` (P≈0.67 / R≈0.72 on the clean test). Use `scripts/validate_accuracy.py` as the offline gate; next levers are threshold sweeps (`PPE_CLASS_CONF`) and more annotated `no_vest` data — not another 14-class fine-tune.
+
+## Lifting `no_helmet` (helmet specialist)
+
+Same failure mode as vest: Combined under-annotates heads, so E0's `no_helmet` is weak (test mAP50 0.536, recall 0.598 under the subset protocol in the grid table). Fine-tuning the 14-class model on helmet-only images would forget vest / gloves / … the same way the vest fine-tune forgot helmet.
+
+`configs/train/helmet_specialist.yaml` + `scripts/prepare_specialist.py --exp helmet_specialist` builds a 2-class (`helmet`, `no_helmet`) set from Combined images that annotate helmets (no external gap set yet). At inference its two classes **replace** the main model's `helmet`/`no_helmet`; vest specialist (if attached) still owns vest/`no_vest`. Both attach on the edge / NPU path via `PPE_SPECIALISTS` (see [`docs/edge_npu.md`](edge_npu.md)).
+
+Notebook: set `EXP = "helmet_specialist"` in the config cell of `notebooks/train_colab_kaggle.ipynb`. The notebook resolves `SPECIALIST = EXP in SPECIALISTS` and scores `data/processed/helmet_specialist/data.yaml` — do **not** hardcode vest-only checks (that silently trained vest while the top cell said helmet).
+
+| Model | `no_helmet` mAP50 | `helmet` mAP50 | notes |
+|---|---|---|---|
+| E0 (14-class, Combined test) | 0.536 | 0.816 | grid table / `eval_e0_n` |
+| Hexmon raw (class-order-corrected) | 0.739 | 0.860 | `docs/baseline_hf.md` |
+| Helmet specialist (Kaggle) | pending training run | pending training run | after a green sanity check, drop numbers here + `results/analysis/eval_helmet_specialist.json` |

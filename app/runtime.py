@@ -56,11 +56,29 @@ def build_detector(
 
         class_conf = parse_class_conf(os.environ.get("PPE_CLASS_CONF"))
     kwargs: dict = {"weights_path": str(path), "conf": float(conf), "class_conf": class_conf}
-    spec = specialist or os.environ.get("PPE_SPECIALIST")
-    if spec:
+    specs: list[str] = []
+    if specialist:
+        specs.append(str(specialist))
+    multi = os.environ.get("PPE_SPECIALISTS", "").strip()
+    if multi:
+        specs.extend(p.strip() for p in multi.split(",") if p.strip())
+    single = os.environ.get("PPE_SPECIALIST")
+    if single and single.strip():
+        specs.append(single.strip())
+    # De-dupe, preserve order.
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for spec in specs:
+        if spec not in seen:
+            seen.add(spec)
+            ordered.append(spec)
+    for spec in ordered:
         if not Path(spec).is_file():
-            raise FileNotFoundError(f"Vest specialist weights not found: {spec} (PPE_SPECIALIST)")
-        kwargs["specialist_weights"] = str(spec)
+            raise FileNotFoundError(
+                f"Specialist weights not found: {spec} (PPE_SPECIALISTS / PPE_SPECIALIST)"
+            )
+    if ordered:
+        kwargs["specialist_weights"] = ordered if len(ordered) > 1 else ordered[0]
     chosen = device if device is not None else default_device()
     if chosen:
         kwargs["device"] = chosen

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ppe.compliance import Detection, WorkerCompliance, associate_ppe_to_persons
@@ -12,7 +12,7 @@ from ppe.schema import (
     HHU_TO_UNIFIED,
     UNIFIED_CLASS_NAMES,
 )
-from ppe.specialist import SPECIALIST_CLASSES
+from ppe.specialist import SPECIALIST_CLASSES, replace_classes_for
 from ppe.thresholds import effective_floor
 
 _RAW_TO_UNIFIED: dict[str, str] = {
@@ -31,7 +31,7 @@ class PPEDetector:
         conf: float = 0.25,
         device: str | None = None,
         class_conf: Mapping[str, float] | None = None,
-        specialist_weights: str | None = None,
+        specialist_weights: str | Sequence[str] | None = None,
     ) -> None:
         self.weights_path = str(weights_path)
         self.conf = conf
@@ -39,8 +39,12 @@ class PPEDetector:
         self.class_conf = dict(class_conf or {})
         self.device = device
         self._model = _yolo_cls()(self.weights_path)
-        # Optional 2-class vest/no_vest model whose output replaces the main model's for those classes.
-        self._specialist = _yolo_cls()(str(specialist_weights)) if specialist_weights else None
+        paths = _as_path_list(specialist_weights)
+        # Optional 2-class specialists (vest/no_vest and/or helmet/no_helmet). Each one's classes
+        # replace the main model's for that pair; NPU / edge sessions use the ONNX equivalent.
+        self._specialists = [_yolo_cls()(path) for path in paths]
+        # Backward-compatible alias used by older call sites / tests.
+        self._specialist = self._specialists[0] if self._specialists else None
 
     def names(self) -> dict[int, str]:
         raw = self._model.names
@@ -64,8 +68,8 @@ class PPEDetector:
         if self.device is not None:
             kwargs["device"] = self.device
         results = self._model.predict(image, **kwargs)
-        if self._specialist is not None:
-            for main, spec in zip(results, self._specialist.predict(image, **kwargs), strict=True):
+        for specialist in self._specialists:
+            for main, spec in zip(results, specialist.predict(image, **kwargs), strict=True):
                 self._merge_specialist(main, spec)
         if self.class_conf:
             for result in results:
@@ -73,7 +77,7 @@ class PPEDetector:
         return results
 
     def _merge_specialist(self, main: Any, spec: Any) -> None:
-        """Replace the main result's vest/no_vest boxes with the specialist's, in place."""
+        """Replace the main result's specialist-owned boxes with the specialist's, in place."""
         merged = _merge_specialist_rows(main, spec)
         if merged is None:
             return
@@ -138,30 +142,41 @@ class PPEDetector:
             )
 
 
-def _merge_specialist_rows(main: Any, spec: Any):
-    """(N, 6) rows [x1, y1, x2, y2, conf, main_class_id]; None if the main model has no vest classes."""
+def _merge_specialist_rows(main: Any, spec: Any, replace: frozenset[str] | None = None):
+    """(N, 6) rows [x1, y1, x2, y2, conf, main_class_id]; None if the main model lacks those classes."""
     np = _np()
     main_names = {int(k): str(v) for k, v in dict(main.names).items()}
     id_for: dict[str, int] = {}
     for cid, raw in main_names.items():
         id_for.setdefault(_to_unified_name(raw), cid)
-    if not SPECIALIST_CLASSES.intersection(id_for):
-        return None
     spec_names = {int(k): _to_unified_name(str(v)) for k, v in dict(spec.names).items()}
+    owned = replace or replace_classes_for(spec_names.values()) or SPECIALIST_CLASSES
+    if not owned.intersection(id_for):
+        return None
 
     rows = []
     if getattr(main, "boxes", None) is not None and len(main.boxes):
         for row in _as_numpy(main.boxes.data):
-            if _to_unified_name(main_names[int(row[5])]) not in SPECIALIST_CLASSES:
+            if _to_unified_name(main_names[int(row[5])]) not in owned:
                 rows.append([float(v) for v in row[:6]])
     if getattr(spec, "boxes", None) is not None and len(spec.boxes):
         for row in _as_numpy(spec.boxes.data):
             name = spec_names.get(int(row[5]))
-            if name in SPECIALIST_CLASSES and name in id_for:
-                rows.append([float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4]), float(id_for[name])])
+            if name in owned and name in id_for:
+                rows.append(
+                    [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4]), float(id_for[name])]
+                )
     if not rows:
         return np.zeros((0, 6), dtype=np.float32)
     return np.asarray(rows, dtype=np.float32)
+
+
+def _as_path_list(specialist_weights: str | Sequence[str] | None) -> list[str]:
+    if specialist_weights is None:
+        return []
+    if isinstance(specialist_weights, str):
+        return [specialist_weights] if specialist_weights.strip() else []
+    return [str(p) for p in specialist_weights if str(p).strip()]
 
 
 def _to_unified_name(name: str) -> str:
