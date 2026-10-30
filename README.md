@@ -252,4 +252,5 @@ ppe bench --weights models/best.onnx
 python -c "from ppe.schema import UNIFIED_CLASS_NAMES; print(len(UNIFIED_CLASS_NAMES))"  # → 14
 pytest tests/
 python -m ppe.cli providers
+python scripts/smoke_edge.py --require-npu   # ONNX-first edge path + hard NPU gate
 ```
