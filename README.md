@@ -141,7 +141,7 @@ Per-class Ultralytics val needs Construction images on disk (`python scripts/eva
 
 ## 7. Deployment
 
-Local demo only — see **[app/README.md](app/README.md)** for weights env vars and endpoints. Edge / NPU (ONNX-first): **[docs/edge_npu.md](docs/edge_npu.md)**.
+Local demo only — see **[app/README.md](app/README.md)** for weights env vars and endpoints. Camera path is NPU-first with timely frame draining; Edge / NPU (ONNX-first): **[docs/edge_npu.md](docs/edge_npu.md)**.
 
 ```bash
 # From repo root

@@ -120,22 +120,9 @@ class PPEDetector:
         return detections
 
     def _draw_compliance(self, image, workers: list[WorkerCompliance]) -> None:
-        cv2 = _cv2()
-        for worker in workers:
-            x1, y1, x2, y2 = (int(v) for v in worker.bbox)
-            color = (0, 0, 220) if worker.violations else (40, 180, 40)
-            cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
-            origin = (x1, max(y1 - 8, 16))
-            cv2.putText(
-                image,
-                worker.label,
-                origin,
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                color,
-                1,
-                cv2.LINE_AA,
-            )
+        from ppe.annotate import draw_compliance
+
+        draw_compliance(image, workers, copy=False)
 
 
 def _merge_specialist_rows(main: Any, spec: Any):

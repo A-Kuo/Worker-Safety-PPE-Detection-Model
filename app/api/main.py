@@ -36,20 +36,26 @@ from app.media import (  # noqa: E402
     open_capture,
     open_video_writer,
     parse_stream_source,
+    read_latest_frame,
     video_meta,
 )
 from app.paths import CLIP_DIR, ensure_src_on_path, resolve_weights_path  # noqa: E402
-from app.runtime import IMPORT_ERROR, build_detector, default_device  # noqa: E402
+from app.runtime import (  # noqa: E402
+    IMPORT_ERROR,
+    DemoEngine,
+    build_engine,
+    default_device,
+    runtime_status,
+)
 
 ensure_src_on_path()
 try:
     from ppe.compliance import Detection, WorkerCompliance, associate_ppe_to_persons  # noqa: E402
-    from ppe.inference import PPEDetector  # noqa: E402
 except ImportError:  # package missing; /health reports not_ready
-    from app.runtime import Detection, PPEDetector, WorkerCompliance, associate_ppe_to_persons  # noqa: E402
+    from app.runtime import Detection, WorkerCompliance, associate_ppe_to_persons  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Detector cache (reload only when weights change; conf is updated in place)
+# Engine cache (reload only when weights change; conf is updated in place)
 # ---------------------------------------------------------------------------
 _detector_lock = threading.Lock()
 _detector = None
@@ -60,12 +66,12 @@ def _apply_conf(detector: Any, conf: float) -> None:
     detector.conf = float(conf)
 
 
-def get_detector(conf: float = 0.25, weights: str | None = None) -> PPEDetector:
+def get_detector(conf: float = 0.25, weights: str | None = None) -> DemoEngine:
     global _detector, _detector_weights
     path = str(resolve_weights_path(weights))
     with _detector_lock:
         if _detector is None or _detector_weights != path:
-            _detector = build_detector(path, conf=conf, device=default_device())
+            _detector = build_engine(path, conf=conf, device=default_device(), prefer_npu=True)
             _detector_weights = path
         else:
             _apply_conf(_detector, conf)
@@ -98,6 +104,10 @@ class HealthOut(BaseModel):
     ppe_package: bool
     device: str | None = None
     detail: str | None = None
+    engine: str | None = None
+    prefer_npu: bool | None = None
+    resolved_providers: list[str] | None = None
+    openvino_device_type: str | None = None
 
 
 class ImagePredictOut(BaseModel):
@@ -188,6 +198,14 @@ def health() -> HealthOut:
         detail = f"ppe import failed: {IMPORT_ERROR}"
     elif not exists:
         detail = f"Weights missing at {weights}. Set PPE_WEIGHTS."
+    status = runtime_status(prefer_npu=True)
+    engine_kind = None
+    if ready:
+        try:
+            engine_kind = get_detector().kind
+        except Exception as exc:  # noqa: BLE001
+            detail = (detail + "; " if detail else "") + f"engine load: {exc}"
+            ready = False
     return HealthOut(
         status="ok" if ready else "not_ready",
         ready=ready,
@@ -196,6 +214,10 @@ def health() -> HealthOut:
         ppe_package=package_ok,
         device=default_device(),
         detail=detail,
+        engine=engine_kind,
+        prefer_npu=status.get("prefer_npu"),
+        resolved_providers=status.get("resolved_providers"),
+        openvino_device_type=status.get("openvino_device_type"),
     )
 
 
@@ -388,15 +410,21 @@ def stream(
     ),
     conf: float = Query(0.25, description="Confidence threshold"),
     max_fps: float = Query(12.0, ge=1, le=30, description="MJPEG send cap"),
+    timely: bool = Query(
+        True,
+        description="Drop buffered frames so the camera stays near real time on NPU/CPU",
+    ),
 ) -> StreamingResponse:
-    """MJPEG stream with boxes and compliance overlays.
+    """MJPEG stream with boxes and compliance overlays (NPU-first engine).
 
     Returns **503** when the webcam index or ``source`` cannot be opened
-    (typical on headless hosts with no camera).
+    (typical on headless hosts with no camera). When ``timely`` is true (default),
+    the capture buffer is drained each tick so slow inference does not replay
+    stale frames.
     """
     conf = _clamp_conf(conf)
     parsed = parse_stream_source(source)
-    cap = open_capture(parsed)
+    cap = open_capture(parsed, low_latency=timely)
     if not cap.isOpened():
         cap.release()
         raise HTTPException(
@@ -416,16 +444,35 @@ def stream(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     min_interval = 1.0 / float(max_fps)
+    engine_kind = getattr(detector, "kind", "unknown")
 
     def frames() -> Any:
         try:
+            import cv2
+
             while True:
                 started = time.perf_counter()
-                ok, frame = cap.read()
+                if timely:
+                    ok, frame = read_latest_frame(cap)
+                else:
+                    ok, frame = cap.read()
                 if not ok or frame is None:
                     break
                 with _detector_lock:
-                    annotated, _workers = detector.predict_and_comply(frame)
+                    timed = detector.predict_timed(frame)
+                annotated = timed.annotated
+                # HUD: latency + engine so operators can see NPU timing live.
+                hud = f"{engine_kind}  {timed.latency_ms:.0f} ms"
+                cv2.putText(
+                    annotated,
+                    hud,
+                    (12, 28),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (30, 220, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
                 jpeg = encode_jpeg(annotated, quality=75)
                 yield (
                     b"--frame\r\n"

@@ -88,6 +88,24 @@ python -m pip install -e ".[edge]"
 
 INT8 dynamic quantization is a **best-effort** edge appendix. Re-check vest / helmet metrics after quantize; use static calibration images when mAP drops too far. Training accuracy work (Colab/Kaggle E0–E4) is separate from this runtime path.
 
+## Camera / demo path (timely frames)
+
+The local API + Streamlit demo (`app/`) prefer this edge stack for camera work:
+
+- Weight resolution is **ONNX / INT8 first** (`app/paths.py`).
+- `GET /stream?timely=true` (default) shrinks the capture buffer and **drains stale frames** after each inference tick so the NPU always sees the newest image instead of replaying a backlog.
+- The Streamlit UI leads with the **Camera** tab (live MJPEG embed + timed snapshot) and surfaces active execution providers / OpenVINO `device_type`.
+- Demo default OpenVINO targeting when unset: `AUTO:NPU,GPU` (`PPE_OPENVINO_DEVICE` still wins).
+
+```powershell
+$env:PPE_WEIGHTS = "models/best.onnx"
+$env:PPE_PROVIDERS = "openvino,cpu"
+$env:PPE_OPENVINO_DEVICE = "AUTO:NPU,GPU"
+uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+# second terminal
+streamlit run app/ui/streamlit_app.py
+```
+
 ## Intel Lunar Lake (AI Boost NPU + Arc iGPU)
 
 Intended compute split: train on Kaggle/Colab T4 or P100 (see [`docs/compute.md`](compute.md)); run real-time edge inference locally on the Lunar Lake NPU/GPU via the OpenVINO EP.
