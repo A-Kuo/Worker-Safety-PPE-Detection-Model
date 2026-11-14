@@ -67,7 +67,8 @@ class EdgeSession:
             "model_path": str(self.model_path),
             "policy": {
                 "providers": list(self.policy.providers),
-                "npu_only": self.policy.npu_only,
+                "npu_only": self.policy.effective_npu_only,
+                "strict_npu": self.policy.strict_npu,
                 "allow_torch": self.policy.allow_torch,
                 "prefer_onnx": self.policy.prefer_onnx,
                 "imgsz": self.policy.imgsz,

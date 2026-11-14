@@ -105,6 +105,28 @@ def list_providers(*, tier: str | None = None) -> list[ExecutionProvider]:
     return [p for p in PROVIDER_REGISTRY if p.tier == tier]
 
 
+def prepare_ort_environment() -> None:
+    """One-time process setup so vendor EPs can find their native libraries.
+
+    On Windows the OpenVINO EP loads ``openvino.dll`` from the ``openvino`` pip package, which is
+    not on the DLL search path by default; without it ORT logs a warning and silently runs on the
+    CPU. ORT ships a helper for this; it is a no-op when absent or on other platforms.
+    """
+    global _ENV_PREPARED
+    if _ENV_PREPARED:
+        return
+    _ENV_PREPARED = True
+    try:
+        from onnxruntime.tools.add_openvino_win_libs import add_openvino_libs_to_path
+
+        add_openvino_libs_to_path()
+    except Exception:  # noqa: BLE001 - optional: not Windows, or not the OpenVINO build
+        pass
+
+
+_ENV_PREPARED = False
+
+
 def available_ort_names() -> list[str]:
     try:
         import onnxruntime as ort
@@ -118,11 +140,13 @@ def resolve_providers(
     *,
     npu_only: bool = False,
     allow_cpu_fallback: bool = True,
+    exclude_cpu: bool = False,
 ) -> list[str]:
     """Return ORT provider name list for ``InferenceSession``.
 
     ``preferred`` are registry keys (``qnn``, ``openvino``, …) or raw ORT names.
     When empty, auto-selects the first available NPU, else GPU, else CPU.
+    ``exclude_cpu`` (strict NPU mode) removes the CPU EP even when it is pinned explicitly.
     """
     installed = available_ort_names()
     installed_set = set(installed)
@@ -148,6 +172,8 @@ def resolve_providers(
                 continue
             if npu_only and ep.tier not in ("npu", "cpu"):
                 continue
+            if exclude_cpu and ep.tier == "cpu":
+                continue
             if ep.ort_name not in chosen:
                 chosen.append(ep.ort_name)
     else:
@@ -161,12 +187,13 @@ def resolve_providers(
                 chosen.append(hit)
                 break
 
-    if allow_cpu_fallback and "CPUExecutionProvider" in installed_set:
+    allow_cpu = allow_cpu_fallback and not exclude_cpu
+    if allow_cpu and "CPUExecutionProvider" in installed_set:
         if "CPUExecutionProvider" not in chosen:
             chosen.append("CPUExecutionProvider")
     # Hard NPU mode (npu_only + no CPU fallback): never silently invent a CPU session.
     # Soft mode still needs a last-resort CPU when nothing else resolved.
-    if not chosen and allow_cpu_fallback and "CPUExecutionProvider" in installed_set:
+    if not chosen and allow_cpu and "CPUExecutionProvider" in installed_set:
         chosen = ["CPUExecutionProvider"]
     return chosen
 
@@ -229,16 +256,33 @@ def key_for_ort_name(ort_name: str) -> str | None:
     return ep.key if ep else None
 
 
-def provider_options_for(key: str, *, openvino_device_type: str | None = None) -> dict:
+def provider_options_for(
+    key: str,
+    *,
+    openvino_device_type: str | None = None,
+    openvino_cache_dir: str | None = None,
+    qnn_backend_path: str | None = None,
+) -> dict:
     """Per-provider ``provider_options`` dict for ``InferenceSession``.
 
-    Only the OpenVINO EP has a device_type concept today (NPU/GPU/CPU/AUTO
-    heterogeneous strings, e.g. ``"AUTO:NPU,GPU"``). Every other provider
-    gets an empty dict — ORT requires one options dict per provider name
-    when ``provider_options`` is passed at all.
+    - OpenVINO: ``device_type`` (NPU/GPU/CPU/AUTO heterogeneous strings, e.g. ``"AUTO:NPU,GPU"``)
+      and ``cache_dir`` (compiled-model cache, avoids NPU recompilation on every launch).
+    - QNN: ``backend_path`` of the HTP library (Hexagon NPU). Defaults per platform.
+    - Every other provider gets an empty dict — ORT requires one options dict per provider name
+      when ``provider_options`` is passed at all.
     """
-    if key == "openvino" and openvino_device_type:
-        return {"device_type": openvino_device_type}
+    if key == "openvino":
+        opts: dict = {}
+        if openvino_device_type:
+            opts["device_type"] = openvino_device_type
+        if openvino_cache_dir:
+            opts["cache_dir"] = openvino_cache_dir
+        return opts
+    if key == "qnn":
+        import sys
+
+        default = "QnnHtp.dll" if sys.platform == "win32" else "libQnnHtp.so"
+        return {"backend_path": qnn_backend_path or default}
     return {}
 
 

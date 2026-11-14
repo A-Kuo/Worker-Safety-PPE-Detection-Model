@@ -32,6 +32,7 @@ build/
 
 # Virtualenvs
 .venv/
+.venv-npu/
 venv/
 env/
 

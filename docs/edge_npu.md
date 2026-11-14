@@ -21,6 +21,32 @@ Default runtime is **ONNX Runtime** with a vendor-agnostic execution-provider re
 
 CI runs `python scripts/smoke_edge.py --require-npu`: on CPU-only runners that proves the hard gate refuses; on a Lunar Lake box with `onnxruntime-openvino` it exercises the OpenVINO EP.
 
+### Strict NPU mode (`PPE_STRICT_NPU=1` / `--strict-npu`)
+
+Hard mode only proves an NPU EP was *requested*. ONNX Runtime always keeps an implicit CPU EP, assigns any op the NPU EP rejects to it, and — if an EP fails to load (e.g. a missing `openvino.dll`) — only logs a warning and runs on the CPU. Strict mode closes those gaps with one switch:
+
+| Guard | What it does |
+|---|---|
+| No CPU EP | Implies `npu_only`, removes every CPU EP even if pinned (`PPE_PROVIDERS=openvino,cpu`) |
+| No node fallback | Sets `session.disable_cpu_ep_fallback=1`: ORT refuses to build the session if any node would run on the CPU |
+| EP must actually load | A requested provider missing from `session.get_providers()` is an error (a `RuntimeWarning` outside strict mode) |
+| Device pinned | OpenVINO device must be `NPU` (default under strict). `GPU`, `CPU`, `AUTO:*`, `HETERO:*` are refused: they can land on the iGPU/CPU |
+| Static shape | A dynamic input shape is refused (NPUs need static shapes) |
+
+### Prove it: `ppe verify-npu`
+
+```powershell
+ppe verify-npu --weights models/best.onnx --providers openvino --out results/analysis/verify_npu.json
+```
+
+Runs a profiled inference and reads which provider executed each node. Exit code 0 only if nothing ran on the CPU **and** the OpenVINO device is pinned to the NPU. `--soft` diagnoses without enforcement and lists the exact CPU-resident ops. `providers_active` always contains the CPU EP (ORT appends it), so trust `by_provider` / `cpu_resident` / `npu_fraction`, not that list. The OpenVINO EP compiles the whole supported graph into one node, so a passing run shows `nodes_total: 1`.
+
+`session.info()` also carries a runtime fingerprint (ORT distribution + version, OpenVINO version and NPU driver, Python/platform, model SHA-256 and opset) so a latency number can be reproduced or distrusted.
+
+**Windows OpenVINO setup.** `onnxruntime-openvino` does not declare the `openvino` runtime as a dependency but the EP needs its DLLs (ORT 1.24 ↔ OpenVINO 2025.4). `pip install -e ".[edge-intel-npu]"` now includes it, and the runtime adds the DLL directory to the search path automatically.
+
+Env: `PPE_STRICT_NPU`, `PPE_OPENVINO_CACHE_DIR` (compiled-model cache, skips NPU recompilation), `PPE_QNN_BACKEND` (QNN HTP library for Snapdragon).
+
 ## Local-only demo
 
 The FastAPI + Streamlit demo defaults to **loopback execution** (`PPE_LOCAL_ONLY=1`): API host `127.0.0.1`, CORS limited to localhost Streamlit/API origins. Inference never leaves the machine — no cloud endpoints. Set `PPE_LOCAL_ONLY=0` / `PPE_API_HOST=0.0.0.0` only for intentional LAN demos.

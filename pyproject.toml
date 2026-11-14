@@ -30,7 +30,9 @@ hf = ["huggingface_hub>=0.24"]
 # `onnxruntime` package in the `edge` extra above and generally cannot
 # coexist with it in one environment — install this in a separate venv,
 # or uninstall `onnxruntime` first. See docs/edge_npu.md.
-edge-intel-npu = ["onnxruntime-openvino>=1.19.0"]
+# `openvino` is NOT a declared dependency of onnxruntime-openvino but the EP needs its runtime DLLs
+# (ORT 1.24 targets OpenVINO 2025.4); without it the EP fails to load and ORT silently uses the CPU.
+edge-intel-npu = ["onnxruntime-openvino>=1.19.0", "openvino>=2025.4,<2026"]
 
 [project.scripts]
 ppe = "ppe.cli:main"

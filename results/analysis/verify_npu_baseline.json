@@ -1,0 +1,25 @@
+{
+  "model": "C:\\GitHub\\Worker Safety PPE Detection Model\\.claude\\worktrees\\npu-first-vest\\archive\\baselines\\snehilsanyal_yolov8n_css\\models\\best.onnx",
+  "strict_npu": true,
+  "providers_requested": [
+    "OpenVINOExecutionProvider"
+  ],
+  "providers_active": [
+    "OpenVINOExecutionProvider",
+    "CPUExecutionProvider"
+  ],
+  "providers_missing": [],
+  "openvino_device_type": "NPU",
+  "openvino_device_pinned_to_npu": true,
+  "method": "profile",
+  "ok": true,
+  "nodes_total": 1,
+  "by_provider": {
+    "OpenVINOExecutionProvider": 1
+  },
+  "npu_nodes": 1,
+  "npu_fraction": 1.0,
+  "cpu_resident": [],
+  "transfer_nodes": 0,
+  "accelerator_nodes": 1
+}

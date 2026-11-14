@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -11,8 +12,10 @@ import numpy as np
 
 from ppe.compliance import Detection
 from ppe.runtime.config import ExecutionPolicy
+from ppe.runtime.fingerprint import runtime_fingerprint
 from ppe.runtime.providers import (
     key_for_ort_name,
+    prepare_ort_environment,
     provider_options_for,
     require_npu_providers,
     resolve_providers,
@@ -64,35 +67,18 @@ class OnnxRuntimeBackend(InferenceBackend):
 
         self.model_path = Path(model_path)
         self.policy = policy
-        self.providers = resolve_providers(
-            policy.providers or None,
-            npu_only=policy.npu_only,
-            allow_cpu_fallback=policy.allow_cpu_fallback,
+        self.session, self.providers, self.providers_missing = open_ort_session(
+            ort, self.model_path, policy
         )
-        require_npu_providers(
-            self.providers,
-            npu_only=policy.npu_only,
-            allow_cpu_fallback=policy.allow_cpu_fallback,
-        )
-        if not self.providers:
-            raise RuntimeError(
-                "No ORT execution providers available. Install onnxruntime "
-                "and/or a vendor EP package"
-                + (" (NPU EP required — CPU fallback is disabled)." if policy.npu_only else ".")
-            )
-        provider_options = [
-            provider_options_for(
-                key_for_ort_name(name) or "",
-                openvino_device_type=policy.openvino_device_type,
-            )
-            for name in self.providers
-        ]
-        session_kwargs: dict[str, Any] = {"providers": self.providers}
-        if any(provider_options):
-            session_kwargs["provider_options"] = provider_options
-        self.session = ort.InferenceSession(str(self.model_path), **session_kwargs)
         self.input_name = self.session.get_inputs()[0].name
         self.input_shape = self.session.get_inputs()[0].shape
+        self.static_input = is_static_shape(self.input_shape)
+        if policy.strict_npu and not self.static_input:
+            raise RuntimeError(
+                f"Strict NPU mode requires a static input shape; {self.model_path.name} has "
+                f"{list(self.input_shape)}. Export with `ppe export` (static 640x640 by default)."
+            )
+        self.fingerprint = runtime_fingerprint(self.model_path)
         # Prefer the class names Ultralytics embeds in the ONNX metadata. Falling back to
         # UNIFIED_CLASS_NAMES *by index* is only right for a 14-class model already in unified
         # order; a 2-class specialist (vest, no_vest) would otherwise decode as helmet/no_helmet.
@@ -111,13 +97,134 @@ class OnnxRuntimeBackend(InferenceBackend):
             "model": str(self.model_path),
             "providers_requested": list(self.policy.providers),
             "providers_active": list(self.session.get_providers()),
+            "providers_missing": list(self.providers_missing),
             "input": self.input_name,
             "input_shape": list(self.input_shape),
             "imgsz": self.policy.imgsz,
-            "npu_only": self.policy.npu_only,
-            "openvino_device_type": self.policy.openvino_device_type,
+            "npu_only": self.policy.effective_npu_only,
+            "strict_npu": self.policy.strict_npu,
+            "static_input": self.static_input,
+            "openvino_device_type": self.policy.effective_openvino_device,
             "class_names": dict(self.class_names),
+            "fingerprint": self.fingerprint,
         }
+
+
+def openvino_device_is_npu(device_type: str | None) -> bool:
+    """True only for a device string that targets the NPU alone (``NPU`` or ``NPU.<n>``)."""
+    d = (device_type or "").strip().upper()
+    return d == "NPU" or (d.startswith("NPU.") and d[4:].isdigit())
+
+
+def is_static_shape(shape: Any) -> bool:
+    """True when every input dim is a concrete positive int (NPUs need this)."""
+    return all(isinstance(d, int) and d > 0 for d in shape)
+
+
+def plan_providers(policy: ExecutionPolicy) -> tuple[list[str], list[dict]]:
+    """Resolve the ORT provider list and per-provider options for ``policy``.
+
+    Single source of truth shared by the backend and ``ppe verify-npu`` so the placement report
+    describes exactly the session inference will run.
+    """
+    providers = resolve_providers(
+        policy.providers or None,
+        npu_only=policy.effective_npu_only,
+        allow_cpu_fallback=policy.effective_allow_cpu_fallback,
+        exclude_cpu=policy.strict_npu,
+    )
+    require_npu_providers(
+        providers,
+        npu_only=policy.effective_npu_only,
+        allow_cpu_fallback=policy.effective_allow_cpu_fallback,
+    )
+    if not providers:
+        raise RuntimeError(
+            "No ORT execution providers available. Install onnxruntime "
+            "and/or a vendor EP package"
+            + (" (NPU EP required — CPU fallback is disabled)." if policy.effective_npu_only else ".")
+        )
+    if policy.strict_npu and "OpenVINOExecutionProvider" in providers:
+        device = policy.effective_openvino_device or ""
+        if not openvino_device_is_npu(device):
+            raise RuntimeError(
+                f"Strict NPU mode needs the OpenVINO device pinned to the NPU, got {device!r}. "
+                "AUTO/HETERO/GPU/CPU may place the model on the iGPU or CPU. Use "
+                "--openvino-device NPU, or drop --strict-npu to benchmark other devices."
+            )
+    options = [
+        provider_options_for(
+            key_for_ort_name(name) or "",
+            openvino_device_type=policy.effective_openvino_device,
+            openvino_cache_dir=policy.openvino_cache_dir,
+            qnn_backend_path=policy.qnn_backend_path,
+        )
+        for name in providers
+    ]
+    return providers, options
+
+
+def make_session_options(
+    ort: Any, policy: ExecutionPolicy, *, profile_prefix: str | None = None
+) -> Any:
+    """``SessionOptions`` for ``policy``. Strict mode forbids silent CPU execution of any node."""
+    so = ort.SessionOptions()
+    if policy.strict_npu:
+        so.add_session_config_entry("session.disable_cpu_ep_fallback", "1")
+    if profile_prefix:
+        so.enable_profiling = True
+        so.profile_file_prefix = profile_prefix
+    return so
+
+
+def open_ort_session(
+    ort: Any,
+    model_path: Path,
+    policy: ExecutionPolicy,
+    *,
+    profile_prefix: str | None = None,
+) -> tuple[Any, list[str], list[str]]:
+    """Create the ORT session for ``policy`` → ``(session, providers_requested, providers_missing)``.
+
+    One factory for inference and for ``ppe verify-npu`` so both describe the same session. Guards
+    against two ways ORT silently degrades to the CPU:
+    - a node the NPU EP rejects (strict mode forbids it via ``disable_cpu_ep_fallback``), and
+    - an EP that fails to *load* (e.g. missing ``openvino.dll``): ORT only logs a warning and runs on
+      the CPU. A requested provider absent from ``session.get_providers()`` is an error in strict mode
+      and a ``RuntimeWarning`` otherwise.
+    """
+    providers, options = plan_providers(policy)
+    prepare_ort_environment()
+    kwargs: dict[str, Any] = {
+        "providers": providers,
+        "sess_options": make_session_options(ort, policy, profile_prefix=profile_prefix),
+    }
+    if any(options):
+        kwargs["provider_options"] = options
+    try:
+        session = ort.InferenceSession(str(model_path), **kwargs)
+    except Exception as exc:
+        if not policy.strict_npu:
+            raise
+        raise RuntimeError(
+            f"Strict NPU mode: {Path(model_path).name} could not be placed entirely on {providers}. "
+            "Either an op is unsupported by the NPU EP, or the EP/device failed to load (check the "
+            "ONNX Runtime log above, and for OpenVINO that the matching `openvino` runtime package is "
+            "installed). Run `ppe verify-npu --soft` to list CPU-resident ops. "
+            f"ORT said: {exc}"
+        ) from exc
+    active = list(session.get_providers())
+    missing = [p for p in providers if p not in active]
+    if missing:
+        msg = (
+            f"Requested execution provider(s) {missing} did not load; active={active}. The model "
+            "will not run where you asked. For OpenVINO install the matching `openvino` runtime "
+            "(pip install -e '.[edge-intel-npu]')."
+        )
+        if policy.strict_npu:
+            raise RuntimeError("Strict NPU mode: " + msg)
+        warnings.warn(msg, RuntimeWarning, stacklevel=2)
+    return session, providers, missing
 
 
 class TorchBackend(InferenceBackend):

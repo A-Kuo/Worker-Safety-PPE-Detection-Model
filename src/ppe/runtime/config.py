@@ -41,8 +41,32 @@ class ExecutionPolicy:
     # OpenVINO EP device_type, e.g. "AUTO:NPU,GPU", "NPU", "GPU", "CPU".
     # Only applies when the openvino provider is selected; ignored otherwise.
     openvino_device_type: str | None = None
+    # Strict NPU mode (PPE_STRICT_NPU=1): one switch that makes "NPU-only" a guarantee, not a
+    # preference. Implies npu_only, drops every CPU EP, asks ORT to refuse CPU fallback at session
+    # creation (``session.disable_cpu_ep_fallback``), requires a static input shape, and defaults the
+    # OpenVINO device to ``NPU`` (not AUTO, which may silently pick the iGPU or CPU).
+    strict_npu: bool = False
+    # OpenVINO compiled-model cache dir: skips NPU recompilation on later launches.
+    openvino_cache_dir: str | None = None
+    # QNN EP HTP backend library (default QnnHtp.dll / libQnnHtp.so).
+    qnn_backend_path: str | None = None
 
     extra: dict = field(default_factory=dict)
+
+    # --- effective values: strict mode wins over the individual flags -------------------------
+    @property
+    def effective_npu_only(self) -> bool:
+        return self.npu_only or self.strict_npu
+
+    @property
+    def effective_allow_cpu_fallback(self) -> bool:
+        return self.allow_cpu_fallback and not self.strict_npu
+
+    @property
+    def effective_openvino_device(self) -> str | None:
+        if self.openvino_device_type:
+            return self.openvino_device_type
+        return "NPU" if self.strict_npu else None
 
     @classmethod
     def from_env(cls, **overrides) -> ExecutionPolicy:
@@ -75,6 +99,9 @@ class ExecutionPolicy:
             specialist=specialist or (specialists[0] if specialists else None),
             specialists=specialists,
             openvino_device_type=openvino_device_type,
+            strict_npu=_env_bool("PPE_STRICT_NPU", False),
+            openvino_cache_dir=os.environ.get("PPE_OPENVINO_CACHE_DIR") or None,
+            qnn_backend_path=os.environ.get("PPE_QNN_BACKEND") or None,
         )
         for key, value in overrides.items():
             if hasattr(policy, key) and value is not None:

@@ -156,10 +156,11 @@ class _FakeInput:
 
 
 class _FakeSession:
-    def __init__(self, model_path, providers=None, provider_options=None):
+    def __init__(self, model_path, providers=None, provider_options=None, sess_options=None):
         self.model_path = model_path
         self.providers = providers
         self.provider_options = provider_options
+        self.sess_options = sess_options
 
     def get_inputs(self):
         return [_FakeInput()]

@@ -5,6 +5,7 @@ Examples (PowerShell — do not use angle brackets)::
     ppe providers
     ppe export --weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
     ppe quantize --model models/best.onnx
+    ppe verify-npu --weights models/best.onnx --providers openvino
     ppe bench --weights models/best.onnx --source path\\to\\image_or_video
     ppe predict --weights models/best.onnx --source path\\to\\frame.jpg
 """
@@ -176,6 +177,8 @@ def _policy_from_args(args: argparse.Namespace) -> "ExecutionPolicy":
         overrides["providers"] = tuple(p.strip() for p in args.providers.split(",") if p.strip())
     if args.npu_only:
         overrides["npu_only"] = True
+    if getattr(args, "strict_npu", False):
+        overrides["strict_npu"] = True
     if args.allow_torch:
         overrides["allow_torch"] = True
     if getattr(args, "openvino_device", None):
@@ -184,6 +187,32 @@ def _policy_from_args(args: argparse.Namespace) -> "ExecutionPolicy":
     if specialists:
         overrides["specialists"] = specialists
     return ExecutionPolicy.from_env(**overrides)
+
+
+def cmd_verify_npu(args: argparse.Namespace) -> int:
+    """Prove which execution provider ran every node. Exit 0 only if nothing ran on the CPU."""
+    from ppe.runtime.config import resolve_model_path
+    from ppe.runtime.placement import verify_placement
+
+    root = _repo_root()
+    args.strict_npu = not args.soft
+    policy = _policy_from_args(args)
+    try:
+        model = resolve_model_path(args.weights, prefer_onnx=True, repo_root=root)
+        report = verify_placement(model, policy, runs=args.runs)
+    except RuntimeError as exc:
+        # Strict-mode refusals (no NPU EP, dynamic shape, CPU-resident op) are results, not crashes.
+        print(json.dumps({"ok": False, "strict_npu": policy.strict_npu, "error": str(exc)}, indent=2))
+        return 1
+    print(json.dumps(report, indent=2))
+    if args.out:
+        out = Path(args.out)
+        if not out.is_absolute():
+            out = root / out
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"Wrote {out}")
+    return 0 if report["ok"] else 1
 
 
 def cmd_predict(args: argparse.Namespace) -> int:
@@ -243,6 +272,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--source", type=str, default=None, help="Image or video path (omit for synthetic)")
     p.add_argument("--providers", type=str, default="", help="Comma list, e.g. openvino,cpu")
     p.add_argument("--npu-only", action="store_true")
+    p.add_argument("--strict-npu", action="store_true", help="No CPU EP, no CPU fallback, static shapes")
     p.add_argument("--allow-torch", action="store_true")
     p.add_argument(
         "--openvino-device",
@@ -263,11 +293,33 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", type=Path, default=None)
     p.set_defaults(func=cmd_bench)
 
+    p = sub.add_parser(
+        "verify-npu",
+        help="Profile one run and prove which provider executed every node (exit 1 if any ran on CPU)",
+    )
+    p.add_argument("--weights", type=Path, default=None, help="ONNX / INT8 model")
+    p.add_argument("--providers", type=str, default="", help="Comma list, e.g. openvino")
+    p.add_argument("--npu-only", action="store_true")
+    p.add_argument("--allow-torch", action="store_true")
+    p.add_argument("--openvino-device", type=str, default="", help="Default under strict mode: NPU")
+    p.add_argument("--specialists", type=str, default="")
+    p.add_argument(
+        "--soft",
+        action="store_true",
+        help="Diagnose without strict enforcement: list CPU-resident ops instead of refusing",
+    )
+    p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--conf", type=float, default=0.25)
+    p.add_argument("--runs", type=int, default=3, help="Profiled inferences on a zero tensor")
+    p.add_argument("--out", type=Path, default=None, help="Write the JSON report here")
+    p.set_defaults(func=cmd_verify_npu)
+
     p = sub.add_parser("predict", help="Run one image through the edge session")
     p.add_argument("--weights", type=Path, default=None)
     p.add_argument("--source", type=str, required=True)
     p.add_argument("--providers", type=str, default="")
     p.add_argument("--npu-only", action="store_true")
+    p.add_argument("--strict-npu", action="store_true", help="No CPU EP, no CPU fallback, static shapes")
     p.add_argument("--allow-torch", action="store_true")
     p.add_argument(
         "--openvino-device",
