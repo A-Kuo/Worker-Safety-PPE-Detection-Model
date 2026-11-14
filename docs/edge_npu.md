@@ -63,7 +63,7 @@ Use real paths (Windows treats `<...>` as redirection). Until Combined E4 exists
 
 ```powershell
 # 1) FP32 ONNX (static 640 — better for many NPUs than dynamic axes)
-python scripts/export_onnx.py --weights baselines/snehilsanyal_yolov8n_css/models/best.pt --imgsz 640 --out models/best.onnx
+python scripts/export_onnx.py --weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt --imgsz 640 --out models/best.onnx
 
 # 2) INT8 (dynamic; no calib folder required)
 python scripts/quantize_onnx.py --model models/best.onnx
@@ -75,10 +75,10 @@ python scripts/smoke_edge.py --require-npu
 
 # 4) Bench (synthetic frame if --source omitted)
 ppe bench --weights models/best.onnx --npu-only
-ppe bench --weights models/best.int8.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only --providers openvino,cpu --openvino-device AUTO:NPU,GPU
+ppe bench --weights models/best.int8.onnx --source archive/baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only --providers openvino,cpu --openvino-device AUTO:NPU,GPU
 
 # 5) Single-image predict + compliance
-ppe predict --weights models/best.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only
+ppe predict --weights models/best.onnx --source archive/baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only
 ```
 
 Install the console script once:
@@ -121,7 +121,7 @@ $env:PPE_PROVIDERS = "openvino,cpu"
 $env:PPE_OPENVINO_DEVICE = "AUTO:NPU,GPU"
 $env:PPE_SPECIALISTS = "models/vest_specialist.onnx,models/helmet_specialist.onnx"
 $env:PPE_CLASS_CONF = "no_vest=0.10,no_helmet=0.15"
-ppe predict --weights models/best.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only --providers openvino,cpu --openvino-device AUTO:NPU,GPU
+ppe predict --weights models/best.onnx --source archive/baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg --npu-only --providers openvino,cpu --openvino-device AUTO:NPU,GPU
 ```
 
 `ppe predict` / `open_session` attach every specialist on the same provider list as the main model. If a `.pt` path is given while `PPE_PREFER_ONNX=1`, an adjacent `.onnx` / `.int8.onnx` sibling is preferred automatically.

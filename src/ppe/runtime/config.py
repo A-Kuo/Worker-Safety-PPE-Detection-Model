@@ -129,12 +129,12 @@ def resolve_model_path(
         root / "models" / "best.onnx",
         root / "runs" / "train" / "e4_full44k" / "weights" / "best.onnx",
         root / "runs" / "train" / "e0_n" / "weights" / "best.onnx",
-        root / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.onnx",
+        root / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.onnx",
     ]
     pt = [
         root / "runs" / "train" / "e4_full44k" / "weights" / "best.pt",
         root / "runs" / "train" / "e0_n" / "weights" / "best.pt",
-        root / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
+        root / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
         root / "models" / "best.pt",
     ]
     candidates = onnx_first + pt if prefer_onnx else pt + onnx_first

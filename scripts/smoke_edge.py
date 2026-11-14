@@ -29,10 +29,10 @@ if str(_SCRIPTS) not in sys.path:
 
 from _common import REPO_ROOT  # noqa: E402
 
-DEFAULT_WEIGHTS = REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt"
+DEFAULT_WEIGHTS = REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt"
 DEFAULT_ONNX = REPO_ROOT / "models" / "best.onnx"
 DEFAULT_SOURCE = (
-    REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "source_files" / "construction-safety.jpg"
+    REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "source_files" / "construction-safety.jpg"
 )
 
 

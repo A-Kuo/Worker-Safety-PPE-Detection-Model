@@ -25,7 +25,7 @@ python scripts/train.py --exp e0_n --dry-run
 python scripts/train.py --exp e0_n
 python scripts/train.py --exp e0_n --resume
 python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
-python scripts/eval_cross_domain.py --weights runs/train/e4_full44k/weights/best.pt
+python archive/scripts/eval_cross_domain.py --weights runs/train/e4_full44k/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e4_full44k/weights/best.pt
 ```
 
@@ -41,7 +41,7 @@ python scripts/calibrate.py --weights runs/train/e4_full44k/weights/best.pt
 
 ## Shared-class comparison vs Construction baseline
 
-Construction baseline (Snehil Sanyal, 10-class, val n=114): global mAP50 = 0.809, mAP50-95 = 0.507, P = 0.900, R = 0.731. Per-class numbers need `scripts/eval_baseline.py` with images on disk.
+Construction baseline (Snehil Sanyal, 10-class, val n=114): global mAP50 = 0.809, mAP50-95 = 0.507, P = 0.900, R = 0.731. Per-class numbers need `archive/scripts/eval_baseline.py` with images on disk.
 
 | Model | helmet | no_helmet | vest | no_vest | mask | no_mask | person | cone | shared mAP50 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -88,15 +88,15 @@ Fill from `scripts/benchmark.py` after `scripts/export_onnx.py`.
 
 ## Scope note: why E1–E3 weren't run this cycle
 
-The E0–E4 grid below is complete and ready to run (data downloaded/remapped/subset, configs written), but this cycle's priority shifted to a pretrained-checkpoint fine-tuning track instead of a full from-scratch grid search (see `docs/baseline_hf.md` and `configs/finetune/`). **E0 is kept and run** as a genuine from-scratch comparison point; **E1–E3 are deliberately deferred**, not abandoned — the question they'd answer (which architecture/loss/aug variant wins from scratch) is superseded for now by the raw-checkpoint-vs-fine-tuned-vs-E0 comparison, which is the more portfolio-relevant result. Revisit E1–E3 if that comparison shows from-scratch training is worth pursuing further.
+The E0–E4 grid below is complete and ready to run (data downloaded/remapped/subset, configs written), but this cycle's priority shifted to a pretrained-checkpoint fine-tuning track instead of a full from-scratch grid search (see `docs/baseline_hf.md` and `archive/configs/finetune/`). **E0 is kept and run** as a genuine from-scratch comparison point; **E1–E3 are deliberately deferred**, not abandoned — the question they'd answer (which architecture/loss/aug variant wins from scratch) is superseded for now by the raw-checkpoint-vs-fine-tuned-vs-E0 comparison, which is the more portfolio-relevant result. Revisit E1–E3 if that comparison shows from-scratch training is worth pursuing further.
 
 ## Fine-tuning base checkpoint
 
-[Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m, trained on Combined v4) was vetted and adopted as the base checkpoint for gap fine-tuning — see `ATTRIBUTION.md` and `configs/models/registry.yaml` for the vetting record, and `docs/baseline_hf.md` for its raw (pre-fine-tune) numbers on this repo's eval sets. Its raw numbers are an external result, not a model trained in this repo. Use `models/pretrained/hexmon_vyra/best_unified_order.pt` (class-order-corrected via `scripts/reorder_checkpoint_classes.py`, not the raw fetch) for any evaluation or fine-tuning — see `ATTRIBUTION.md` for why.
+[Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m, trained on Combined v4) was vetted and adopted as the base checkpoint for gap fine-tuning — see `ATTRIBUTION.md` and `archive/configs/models/registry.yaml` for the vetting record, and `docs/baseline_hf.md` for its raw (pre-fine-tune) numbers on this repo's eval sets. Its raw numbers are an external result, not a model trained in this repo. Use `models/pretrained/hexmon_vyra/best_unified_order.pt` (class-order-corrected via `archive/scripts/reorder_checkpoint_classes.py`, not the raw fetch) for any evaluation or fine-tuning — see `ATTRIBUTION.md` for why.
 
 ## Gap fine-tuning: vest/no_vest reliability
 
-Gap fine-tuning targets **vest/no_vest** (README priority #1), not goggles as originally scoped — a concrete dataset was found first ([novest/no-vest-detect v1](https://universe.roboflow.com/novest/no-vest-detect), 998 images, ~1,112 no-vest instances, CC BY 4.0; remapped via `scripts/remap_labels.py --mapping gap_vest` with zero dropped boxes). Config: `configs/finetune/gap_vest.yaml` / `configs/data/gap_finetune.yaml`. Goggles hard-negative fine-tuning stays deferred; `configs/finetune/gap_goggles.yaml` remains as a template. Run: `python scripts/finetune.py --exp gap_vest` (Kaggle/Colab GPU — not run locally yet).
+Gap fine-tuning targets **vest/no_vest** (README priority #1), not goggles as originally scoped — a concrete dataset was found first ([novest/no-vest-detect v1](https://universe.roboflow.com/novest/no-vest-detect), 998 images, ~1,112 no-vest instances, CC BY 4.0; remapped via `scripts/remap_labels.py --mapping gap_vest` with zero dropped boxes). Config: `archive/configs/finetune/gap_vest.yaml` / `archive/configs/data/gap_finetune.yaml`. Goggles hard-negative fine-tuning stays deferred; `archive/configs/finetune/gap_goggles.yaml` remains as a template. Run: `python archive/scripts/finetune.py --exp gap_vest` (Kaggle/Colab GPU — not run locally yet).
 
 ## Lifting `no_vest`
 

@@ -23,7 +23,7 @@ edge = [
     "onnx>=1.15.0",
     "onnxconverter-common>=1.14.0",
 ]
-# Only needed by scripts/fetch_checkpoint.py — not a core runtime dependency.
+# Only needed by archive/scripts/fetch_checkpoint.py — not a core runtime dependency.
 hf = ["huggingface_hub>=0.24"]
 # Intel NPU/iGPU edge path (Lunar Lake AI Boost NPU + Arc iGPU via OpenVINO).
 # `onnxruntime-openvino` occupies the same import namespace as the plain
@@ -39,5 +39,5 @@ ppe = "ppe.cli:main"
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]

@@ -1,9 +1,9 @@
 # Attribution
 
 This repository is an original rewrite. The files under
-`baselines/snehilsanyal_yolov8n_css/` are **inherited third-party artifacts**,
+`archive/baselines/snehilsanyal_yolov8n_css/` are **inherited third-party artifacts**,
 not work trained in this project. Do not present `models/best.pt` (now at
-`baselines/snehilsanyal_yolov8n_css/models/best.pt`) as our training run.
+`archive/baselines/snehilsanyal_yolov8n_css/models/best.pt`) as our training run.
 
 ## Inherited baseline
 
@@ -48,21 +48,21 @@ was trained on the same Roboflow "Personal Protective Equipment Combined
 Model v4" export listed above, so its raw class-name strings match this
 repo's `COMBINED_RAW_TO_UNIFIED` mapping exactly — no new label mapping was
 needed. Pinned at commit `08895b33d95d2587423ebe4f7c1b9c41beebd642` via
-`scripts/fetch_checkpoint.py`; see `models/pretrained/manifest.json` for the
-verified sha256 and fetch record, and `configs/models/registry.yaml` for the
+`archive/scripts/fetch_checkpoint.py`; see `archive/models/pretrained/manifest.json` for the
+verified sha256 and fetch record, and `archive/configs/models/registry.yaml` for the
 vetting notes. Do not present the raw checkpoint's numbers
-(`docs/baseline_hf.md`) as a model trained in this repo — they are the
+(`archive/docs/baseline_hf.md`) as a model trained in this repo — they are the
 starting point for fine-tuning, not our result.
 
 **Class-order correction:** Hexmon's own class order is alphabetical, not
 this repo's `UNIFIED_CLASS_NAMES` order — since Ultralytics matches
 predictions to ground truth by numeric id, not name, this silently corrupted
-both the raw `docs/baseline_hf.md` eval numbers and would have corrupted any
+both the raw `archive/docs/baseline_hf.md` eval numbers and would have corrupted any
 fine-tuning against a standard unified-order dataset. Fixed once via
-`scripts/reorder_checkpoint_classes.py`, which permutes only the detection
+`archive/scripts/reorder_checkpoint_classes.py`, which permutes only the detection
 head's classification-conv output channels (box-regression weights and
 everything else are bit-identical) — verified correct via
-`scripts/verify_reorder.py` on multiple real test images (identical boxes and
+`archive/scripts/verify_reorder.py` on multiple real test images (identical boxes and
 confidences, only class ids/names change). The corrected checkpoint is
 `models/pretrained/hexmon_vyra/best_unified_order.pt` (see the
 `hexmon_vyra_unified_order` manifest entry); use this one, not the raw fetch,
@@ -74,5 +74,5 @@ for both evaluation and fine-tuning.
 (MIT license) was evaluated as an alternative base checkpoint and rejected:
 its 6 classes include no negative/violation classes (no `no_vest`,
 `no_helmet`, etc.), which is structurally incompatible with this repo's
-paired-class compliance design. See `configs/models/registry.yaml` for the
+paired-class compliance design. See `archive/configs/models/registry.yaml` for the
 full vetting notes.

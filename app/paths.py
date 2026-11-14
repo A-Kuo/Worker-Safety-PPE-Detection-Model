@@ -12,9 +12,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_WEIGHT_CANDIDATES = (
     REPO_ROOT / "models" / "best.int8.onnx",
     REPO_ROOT / "models" / "best.onnx",
-    REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.int8.onnx",
-    REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.onnx",
-    REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
+    REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.int8.onnx",
+    REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.onnx",
+    REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
     REPO_ROOT / "models" / "best.pt",
 )
 

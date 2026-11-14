@@ -29,7 +29,7 @@ python scripts/train.py --exp e0_n --batch 8 --device 0
 
 # 6) Eval + calibration (point --weights at your run)
 python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
-python scripts/eval_cross_domain.py --weights runs/train/e4_full44k/weights/best.pt
+python archive/scripts/eval_cross_domain.py --weights runs/train/e4_full44k/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e4_full44k/weights/best.pt
 
 # 7) Export + INT8 + edge bench (PowerShell: do not use <angle brackets> in paths)
@@ -50,7 +50,7 @@ streamlit run app/ui/streamlit_app.py
 Inherited Construction baseline audit (no Combined download required if weights exist):
 
 ```bash
-python scripts/eval_baseline.py
+python archive/scripts/eval_baseline.py
 ```
 
-Docs: [docs/baseline.md](../docs/baseline.md), [docs/experiments.md](../docs/experiments.md), [docs/compute.md](../docs/compute.md), [docs/edge_npu.md](../docs/edge_npu.md), [app/README.md](../app/README.md).
+Docs: [archive/docs/baseline.md](../archive/docs/baseline.md), [docs/experiments.md](../docs/experiments.md), [docs/compute.md](../docs/compute.md), [docs/edge_npu.md](../docs/edge_npu.md), [app/README.md](../app/README.md).

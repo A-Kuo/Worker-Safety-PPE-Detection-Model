@@ -3,7 +3,7 @@
 Examples (PowerShell — do not use angle brackets)::
 
     ppe providers
-    ppe export --weights baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
+    ppe export --weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
     ppe quantize --model models/best.onnx
     ppe bench --weights models/best.onnx --source path\\to\\image_or_video
     ppe predict --weights models/best.onnx --source path\\to\\frame.jpg

@@ -28,14 +28,14 @@ The service reads `PPE_WEIGHTS` if set. Otherwise it uses the first file that ex
 
 1. `models/best.int8.onnx`
 2. `models/best.onnx`
-3. `baselines/.../best.int8.onnx` / `best.onnx`
-4. `baselines/snehilsanyal_yolov8n_css/models/best.pt`
+3. `archive/baselines/.../best.int8.onnx` / `best.onnx`
+4. `archive/baselines/snehilsanyal_yolov8n_css/models/best.pt`
 5. `models/best.pt`
 
 Export ONNX for timely NPU camera inference:
 
 ```bash
-python scripts/export_onnx.py --weights baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
+python scripts/export_onnx.py --weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
 ```
 
 Optional env: `PPE_DEVICE` (Torch fallback), `PPE_PROVIDERS`, `PPE_NPU_ONLY`, `PPE_OPENVINO_DEVICE` (default demo bias `AUTO:NPU,GPU`), `PPE_PREFER_NPU` (default true), `PPE_SPECIALISTS` (comma ONNX paths), `PPE_CLASS_CONF`, `PPE_LOCAL_ONLY` (default true — loopback bind + localhost CORS), `PPE_API_HOST` / `PPE_API_PORT`, `PPE_API_URL` (UI live-stream base).

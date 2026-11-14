@@ -5,7 +5,7 @@ YOLOv8-based personal protective equipment (PPE) detection with a **unified 14-c
 | | |
 |---|---|
 | **Train schema** | Combined PPE v4 → 14 unified classes (`helmet` / `no_helmet`, …) |
-| **Inherited baseline** | Construction YOLOv8n — mAP50 **0.809**, mAP50-95 **0.507** ([docs/baseline.md](docs/baseline.md)) |
+| **Inherited baseline** | Construction YOLOv8n — mAP50 **0.809**, mAP50-95 **0.507** ([archive/docs/baseline.md](archive/docs/baseline.md)) |
 | **Demo** | [app/README.md](app/README.md) — FastAPI + Streamlit |
 | **Credits** | [ATTRIBUTION.md](ATTRIBUTION.md) |
 
@@ -77,12 +77,12 @@ Configs: [`configs/data/`](configs/data/). Compute notes: [`docs/compute.md`](do
 
 ## 4. Model Architecture
 
-- **Baseline / primary detector:** Ultralytics **YOLOv8n** (nano) — Construction inherited weights under [`baselines/snehilsanyal_yolov8n_css/`](baselines/snehilsanyal_yolov8n_css/); unified runs use the same family.
+- **Baseline / primary detector:** Ultralytics **YOLOv8n** (nano) — Construction inherited weights under [`archive/baselines/snehilsanyal_yolov8n_css/`](archive/baselines/snehilsanyal_yolov8n_css/); unified runs use the same family.
 - **Variants in the experiment grid:** YOLOv8**s** (E1); optional **m** only if E1 and E4 finish early.
 - **Compliance layer:** `src/ppe/compliance.py` associates PPE boxes to `person` via containment / IoU and emits strings like `Worker k — missing helmet, vest`.
 - **Optional VLM:** not implemented this cycle (see §8).
 
-**Fine-tuning base checkpoint:** [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m on Combined v4, CC BY 4.0) was vetted and adopted as the base for gap fine-tuning on vest/no_vest reliability — see `ATTRIBUTION.md`, `configs/models/registry.yaml`, and `docs/baseline_hf.md` for its raw (pre-fine-tune) numbers. Fetched and pinned via `scripts/fetch_checkpoint.py`; its class order was then corrected to match this repo's unified schema via `scripts/reorder_checkpoint_classes.py` (verified via `scripts/verify_reorder.py`) — use `models/pretrained/hexmon_vyra/best_unified_order.pt`, not the raw fetch.
+**Fine-tuning base checkpoint:** [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m on Combined v4, CC BY 4.0) was vetted and adopted as the base for gap fine-tuning on vest/no_vest reliability — see `ATTRIBUTION.md`, `archive/configs/models/registry.yaml`, and `archive/docs/baseline_hf.md` for its raw (pre-fine-tune) numbers. Fetched and pinned via `archive/scripts/fetch_checkpoint.py`; its class order was then corrected to match this repo's unified schema via `archive/scripts/reorder_checkpoint_classes.py` (verified via `archive/scripts/verify_reorder.py`) — use `models/pretrained/hexmon_vyra/best_unified_order.pt`, not the raw fetch.
 
 ---
 
@@ -116,7 +116,7 @@ Scripts and YAML drive training; nothing is claimed as a finished Combined run u
 
 ### Inherited Construction baseline (documented, not our train)
 
-From [`docs/baseline.md`](docs/baseline.md) / inherited `results.csv` (epoch 99):
+From [`archive/docs/baseline.md`](archive/docs/baseline.md) / inherited `results.csv` (epoch 99):
 
 | Metric | Value |
 |---|---|
@@ -125,14 +125,14 @@ From [`docs/baseline.md`](docs/baseline.md) / inherited `results.csv` (epoch 99)
 | Precision | **0.900** |
 | Recall | **0.731** |
 
-Per-class Ultralytics val needs Construction images on disk (`python scripts/eval_baseline.py`). Confusion-matrix takeaways (inherited plot): `NO-*` classes leak into background — motivation for recall-first threshold sweeps.
+Per-class Ultralytics val needs Construction images on disk (`python archive/scripts/eval_baseline.py`). Confusion-matrix takeaways (inherited plot): `NO-*` classes leak into background — motivation for recall-first threshold sweeps.
 
 ### Scripts for rigor (after Combined weights exist)
 
 | Script | Purpose |
 |---|---|
 | `scripts/eval.py` | In-domain Combined eval |
-| `scripts/eval_cross_domain.py` | Combined / Construction (mapped) / HHU tables |
+| `archive/scripts/eval_cross_domain.py` | Combined / Construction (mapped) / HHU tables |
 | `scripts/calibrate.py` | ECE, Brier, `no_*` confidence sweeps (target R ≥ 0.90) |
 | `scripts/validate_accuracy.py` | Offline product-bar gate on recorded `results/analysis/eval_*.json` (vest/helmet/goggles) |
 | `scripts/benchmark.py` + `export_onnx.py` / `quantize_onnx.py` | Latency / FPS; ONNX + INT8 edge path |
@@ -161,7 +161,7 @@ streamlit run app/ui/streamlit_app.py
 
 OpenAPI: http://127.0.0.1:8000/docs — `POST /predict/image`, `POST /predict/video`, `GET /stream` (MJPEG).
 
-Default weights: `PPE_WEIGHTS`, else first existing of `baselines/snehilsanyal_yolov8n_css/models/best.pt` or `models/best.pt`.
+Default weights: `PPE_WEIGHTS`, else first existing of `archive/baselines/snehilsanyal_yolov8n_css/models/best.pt` or `models/best.pt`.
 
 ---
 
@@ -187,14 +187,14 @@ Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a l
 |---|---|
 | Snehil Sanyal Construction YOLOv8n weights, plots, `results.csv`, sample media | `src/ppe/` schema, compliance, inference |
 | Original Roboflow Construction notes / yaml layout | `scripts/` download → remap → subset → analyze → train → eval → calibrate → export → benchmark |
-| Artifact dump moved under `baselines/snehilsanyal_yolov8n_css/` | `configs/data`, `configs/train`, docs, tests |
-| Hexmon/vyra-yolo-ppe-detection checkpoint (fetched, pinned, not fine-tuned as-is) | Checkpoint fetch/provenance tooling (`scripts/fetch_checkpoint.py`, `configs/models/registry.yaml`, `models/pretrained/manifest.json`), class-order correction (`scripts/reorder_checkpoint_classes.py`, `scripts/verify_reorder.py`) |
-| novest/no-vest-detect v1 (Roboflow Universe, gap-fill vest/no_vest data) | Gap fine-tuning pipeline (`scripts/finetune.py`, `configs/finetune/`) and the raw-vs-fine-tuned-vs-from-scratch comparison analysis |
+| Artifact dump moved under `archive/baselines/snehilsanyal_yolov8n_css/` | `configs/data`, `configs/train`, docs, tests |
+| Hexmon/vyra-yolo-ppe-detection checkpoint (fetched, pinned, not fine-tuned as-is) | Checkpoint fetch/provenance tooling (`archive/scripts/fetch_checkpoint.py`, `archive/configs/models/registry.yaml`, `archive/models/pretrained/manifest.json`), class-order correction (`archive/scripts/reorder_checkpoint_classes.py`, `archive/scripts/verify_reorder.py`) |
+| novest/no-vest-detect v1 (Roboflow Universe, gap-fill vest/no_vest data) | Gap fine-tuning pipeline (`archive/scripts/finetune.py`, `archive/configs/finetune/`) and the raw-vs-fine-tuned-vs-from-scratch comparison analysis |
 | | FastAPI + Streamlit demo under `app/` |
 | | Edge runtime (`src/ppe/runtime/`), `ppe` CLI, ONNX INT8 quantize, Intel NPU/OpenVINO device targeting |
 | | Honest attribution and portfolio README |
 
-**Do not** present `baselines/.../models/best.pt` as a model trained here.
+**Do not** present `archive/baselines/.../models/best.pt` as a model trained here.
 
 ### Citations
 
@@ -211,12 +211,12 @@ Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
 ```text
 src/ppe/           # schema, compliance, inference, runtime (ORT EPs), cli
 scripts/           # pipeline CLIs (+ run_pipeline.md)
-configs/data/      # construction, combined, hardhat_eval
+configs/data/      # combined
 configs/train/     # E0–E4 experiment YAMLs
 app/               # FastAPI + Streamlit
-docs/              # baseline, experiments, compute, edge_npu
+docs/              # experiments, compute, edge_npu
 models/            # exported ONNX / INT8 (binaries gitignored)
-baselines/         # inherited Snehil Construction artifacts
+archive/           # inherited baselines, Hexmon/gap tooling, legacy docs (see archive/README.md)
 tests/             # schema, compliance, runtime unit tests
 ```
 
@@ -237,7 +237,7 @@ python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
 python scripts/calibrate.py --weights runs/train/e0_n/weights/best.pt
 python scripts/validate_accuracy.py   # product bars vs results/analysis/eval_*.json
 # Edge path until Combined E4 exists — use inherited Construction weights:
-python scripts/export_onnx.py --weights baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
+python scripts/export_onnx.py --weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
 python scripts/quantize_onnx.py --model models/best.onnx
 # Class-pair specialists (vest / helmet) export to ONNX and attach on NPU via PPE_SPECIALISTS:
 # ppe export --weights runs/train/vest_specialist/weights/best.pt --out models/vest_specialist.onnx
