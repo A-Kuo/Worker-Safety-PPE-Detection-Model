@@ -164,9 +164,46 @@ def resolve_providers(
     if allow_cpu_fallback and "CPUExecutionProvider" in installed_set:
         if "CPUExecutionProvider" not in chosen:
             chosen.append("CPUExecutionProvider")
-    if not chosen and "CPUExecutionProvider" in installed_set:
+    # Hard NPU mode (npu_only + no CPU fallback): never silently invent a CPU session.
+    # Soft mode still needs a last-resort CPU when nothing else resolved.
+    if not chosen and allow_cpu_fallback and "CPUExecutionProvider" in installed_set:
         chosen = ["CPUExecutionProvider"]
     return chosen
+
+
+def has_npu_provider(ort_names: Sequence[str]) -> bool:
+    """True if any resolved ORT provider is an NPU-tier registry entry."""
+    return any(_BY_ORT.get(name) and _BY_ORT[name].tier == "npu" for name in ort_names)
+
+
+def require_npu_providers(
+    ort_names: Sequence[str],
+    *,
+    npu_only: bool,
+    allow_cpu_fallback: bool,
+) -> None:
+    """Raise when NPU was required but no NPU EP made it into the session list.
+
+    Soft ``npu_only`` (CPU fallback allowed) is a preference: CUDA/TensorRT are
+    skipped, CPU may remain. Hard mode (``PPE_ALLOW_CPU_FALLBACK=0``) must see a
+    real NPU EP or fail before building the session — otherwise "NPU capable"
+    deploys silently run on CPU.
+    """
+    if not npu_only:
+        return
+    if has_npu_provider(ort_names):
+        return
+    if allow_cpu_fallback and ort_names:
+        return
+    installed = available_ort_names()
+    npu_keys = [p.key for p in list_providers(tier="npu")]
+    raise RuntimeError(
+        "NPU execution required but no NPU ONNX Runtime provider is available. "
+        f"Resolved={list(ort_names) or []}, installed={installed}, "
+        f"known NPU keys={npu_keys}. Install a vendor EP "
+        "(e.g. pip install -e '.[edge-intel-npu]' for OpenVINO) "
+        "or set PPE_ALLOW_CPU_FALLBACK=1 for soft CPU fallback."
+    )
 
 
 def provider_status() -> list[dict]:

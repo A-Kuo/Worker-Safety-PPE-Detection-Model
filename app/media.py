@@ -12,6 +12,8 @@ import numpy as np
 DEFAULT_MAX_VIDEO_FRAMES = 300
 DEFAULT_MAX_VIDEO_SECONDS = 45.0
 JPEG_QUALITY = 85
+# Soft drain depth when catching up after a slow NPU/CPU inference tick.
+LATEST_FRAME_DRAIN = 4
 
 
 def decode_image_bytes(data: bytes) -> np.ndarray:
@@ -45,10 +47,42 @@ def parse_stream_source(source: str | None) -> int | str:
     return text
 
 
-def open_capture(source: int | str) -> cv2.VideoCapture:
+def open_capture(source: int | str, *, low_latency: bool = False) -> cv2.VideoCapture:
     if isinstance(source, str) and Path(source).is_file():
-        return cv2.VideoCapture(str(Path(source)))
-    return cv2.VideoCapture(source)
+        cap = cv2.VideoCapture(str(Path(source)))
+    else:
+        cap = cv2.VideoCapture(source)
+    if low_latency and cap.isOpened():
+        configure_capture_for_latency(cap)
+    return cap
+
+
+def configure_capture_for_latency(cap: cv2.VideoCapture) -> None:
+    """Shrink the capture buffer so the camera path stays near real time."""
+    try:
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    except Exception:  # noqa: BLE001 — backend-dependent; best-effort
+        pass
+
+
+def read_latest_frame(
+    cap: cv2.VideoCapture,
+    *,
+    drain: int = LATEST_FRAME_DRAIN,
+) -> tuple[bool, np.ndarray | None]:
+    """Return the newest frame, discarding buffered intermediates.
+
+    After a slow inference tick the capture queue can hold stale frames.
+    Draining keeps NPU/camera loops timely instead of falling further behind.
+    """
+    ok = cap.grab()
+    if not ok:
+        return False, None
+    depth = max(int(drain), 0)
+    for _ in range(depth):
+        if not cap.grab():
+            break
+    return cap.retrieve()
 
 
 def video_meta(cap: cv2.VideoCapture) -> dict[str, float | int]:
