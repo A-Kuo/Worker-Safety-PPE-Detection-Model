@@ -24,6 +24,7 @@ import numpy as np
 
 from ppe.runtime.backends import is_static_shape, open_ort_session, openvino_device_is_npu
 from ppe.runtime.config import ExecutionPolicy
+from ppe.runtime.fingerprint import runtime_fingerprint
 from ppe.runtime.providers import list_providers
 
 _CPU = "CPUExecutionProvider"
@@ -116,22 +117,17 @@ def verify_placement(
     import onnxruntime as ort
 
     model_path = Path(model_path)
-    tmp = tempfile.mkdtemp(prefix="ppe_profile_")
-    session, providers, missing = open_ort_session(
-        ort, model_path, policy, profile_prefix=os.path.join(tmp, "ort")
-    )
-    name, tensor = _zero_input(session, policy.imgsz)
-    for _ in range(max(1, runs)):
-        session.run(None, {name: tensor})
-    profile_path = Path(session.end_profiling())
-    try:
-        events = json.loads(profile_path.read_text(encoding="utf-8"))
-    finally:
-        try:
-            profile_path.unlink()
-            os.rmdir(tmp)
-        except OSError:
-            pass
+    # The directory (and any partial profile) is removed on every exit path, including a strict
+    # refusal while opening the session.
+    with tempfile.TemporaryDirectory(prefix="ppe_profile_") as tmp:
+        session, providers, missing = open_ort_session(
+            ort, model_path, policy, profile_prefix=os.path.join(tmp, "ort")
+        )
+        name, tensor = _zero_input(session, policy.imgsz)
+        for _ in range(max(1, runs)):
+            session.run(None, {name: tensor})
+        active = list(session.get_providers())
+        events = json.loads(Path(session.end_profiling()).read_text(encoding="utf-8"))
 
     summary = parse_profile(events)
     strict = policy.strict_npu
@@ -155,11 +151,13 @@ def verify_placement(
         "model": str(model_path),
         "strict_npu": strict,
         "providers_requested": providers,
-        "providers_active": list(session.get_providers()),
+        "providers_active": active,
         "providers_missing": missing,
         "openvino_device_type": device,
         "openvino_device_pinned_to_npu": device_pinned,
         "method": method,
         "ok": ok,
         **summary,
+        # Versions, NPU driver and model hash: what the verdict above was produced by.
+        "fingerprint": runtime_fingerprint(model_path),
     }

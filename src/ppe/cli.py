@@ -3,7 +3,7 @@
 Examples (PowerShell — do not use angle brackets)::
 
     ppe providers
-    ppe export --weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
+    ppe export --weights runs/train/vest_specialist/weights/best.pt --out models/vest_specialist.onnx
     ppe quantize --model models/best.onnx
     ppe verify-npu --weights models/best.onnx --providers openvino
     ppe bench --weights models/best.onnx --source path\\to\\image_or_video
@@ -20,13 +20,26 @@ from pathlib import Path
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    """Base for relative paths: PPE_HOME, else the source checkout, else the CWD (wheel install)."""
+    from ppe.paths import project_root
+
+    return project_root()
+
+
+def _abs(path: Path | str, root: Path) -> Path:
+    path = Path(path).expanduser()
+    return path if path.is_absolute() else root / path
 
 
 def _ensure_path() -> None:
-    root = _repo_root()
-    src = root / "src"
-    for path in (str(root), str(src)):
+    # Only a source checkout needs (and may safely get) its root/src on sys.path. From a wheel the
+    # project root is the CWD, and putting an arbitrary CWD on the import path would be wrong.
+    from ppe.paths import source_root
+
+    root = source_root()
+    if root is None:
+        return
+    for path in (str(root), str(root / "src")):
         if path not in sys.path:
             sys.path.insert(0, path)
 
@@ -40,49 +53,42 @@ def cmd_providers(_args: argparse.Namespace) -> int:
 
 
 def cmd_export(args: argparse.Namespace) -> int:
-    # Delegate to scripts/export_onnx.py logic via subprocess-free import path.
-    root = _repo_root()
-    scripts = root / "scripts"
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    from export_onnx import main as export_main  # type: ignore
+    from ppe.tools.export import export_model
 
-    argv = ["export_onnx.py"]
-    if args.weights:
-        argv += ["--weights", str(args.weights)]
-    if args.out:
-        argv += ["--out", str(args.out)]
-    argv += ["--imgsz", str(args.imgsz), "--format", args.format, "--opset", str(args.opset)]
-    if args.dynamic:
-        argv.append("--dynamic")
-    old = sys.argv
+    root = _repo_root()
+    if not args.weights:
+        raise SystemExit("ppe export: pass --weights path/to/best.pt")
     try:
-        sys.argv = argv
-        return int(export_main())
-    finally:
-        sys.argv = old
+        written = export_model(
+            _abs(args.weights, root),
+            _abs(args.out, root),
+            imgsz=args.imgsz,
+            dynamic=args.dynamic,
+            opset=args.opset,
+            fmt=args.format,
+        )
+    except (RuntimeError, FileNotFoundError) as exc:
+        raise SystemExit(f"ppe export: {exc}") from exc
+    print(f"Wrote {written}")
+    return 0
 
 
 def cmd_quantize(args: argparse.Namespace) -> int:
-    root = _repo_root()
-    scripts = root / "scripts"
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    from quantize_onnx import main as quant_main  # type: ignore
+    from ppe.tools.quantize import quantize_model
 
-    argv = ["quantize_onnx.py", "--model", str(args.model)]
-    if args.out:
-        argv += ["--out", str(args.out)]
-    if args.calibration:
-        argv += ["--calibration", str(args.calibration)]
-    if args.static:
-        argv.append("--static")
-    old = sys.argv
+    root = _repo_root()
     try:
-        sys.argv = argv
-        return int(quant_main())
-    finally:
-        sys.argv = old
+        written = quantize_model(
+            _abs(args.model, root),
+            _abs(args.out, root) if args.out else None,
+            calibration=_abs(args.calibration, root) if args.calibration else None,
+            static=args.static,
+        )
+    except (RuntimeError, FileNotFoundError, ValueError) as exc:
+        raise SystemExit(f"ppe quantize: {exc}") from exc
+    print(f"Wrote {written} ({written.stat().st_size} bytes)")
+    print("Note: validate accuracy after INT8 quantization before using the model.")
+    return 0
 
 
 def cmd_bench(args: argparse.Namespace) -> int:
@@ -90,11 +96,11 @@ def cmd_bench(args: argparse.Namespace) -> int:
     import numpy as np
 
     from ppe.runtime import open_session
+    from ppe.runtime.fingerprint import scrub_paths
 
     root = _repo_root()
     policy = _policy_from_args(args)
     session = open_session(args.weights, policy=policy, repo_root=root)
-    print(json.dumps(session.info(), indent=2, default=str))
 
     source = args.source
     if not source:
@@ -128,30 +134,51 @@ def cmd_bench(args: argparse.Namespace) -> int:
             if not frames:
                 raise SystemExit("No frames read from source")
 
-    # Warmup
-    for _ in range(args.warmup):
-        session.predict(frames[0])
+    from ppe.runtime.stats import fps_from_ms, summarize, summarize_stages
 
-    latencies: list[float] = []
+    # Warmup: the first runs include NPU graph compilation / kernel autotune and must not be timed.
+    for i in range(args.warmup):
+        session.predict(frames[i % len(frames)])
+
+    iterations = max(1, args.iterations)
+    totals: list[float] = []
+    stage_samples: list[dict[str, float]] = []
     total_dets = 0
-    for frame in frames:
+    wall0 = time.perf_counter()
+    for i in range(iterations):
         t0 = time.perf_counter()
-        dets = session.predict(frame)
-        latencies.append((time.perf_counter() - t0) * 1000.0)
+        dets = session.predict(frames[i % len(frames)])
+        totals.append((time.perf_counter() - t0) * 1000.0)
+        stage_samples.append(session.last_timings)
         total_dets += len(dets)
+    wall_s = time.perf_counter() - wall0
 
-    mean_ms = sum(latencies) / len(latencies)
+    latency = summarize(totals)
+    info = session.backend.info()
     result = {
         "source": label,
-        "frames": len(frames),
-        "mean_latency_ms": round(mean_ms, 3),
-        "fps": round(1000.0 / mean_ms, 2) if mean_ms else 0.0,
-        "p50_ms": round(sorted(latencies)[len(latencies) // 2], 3),
+        "source_frames": len(frames),
+        "iterations": iterations,
+        "warmup": args.warmup,
+        "latency_ms": latency,
+        "fps_mean": round(iterations / wall_s, 2) if wall_s > 0 else 0.0,
+        "fps_from_p50": fps_from_ms(latency.get("p50", 0.0)),
+        "fps_from_p95": fps_from_ms(latency.get("p95", 0.0)),
+        "stages_ms": summarize_stages(stage_samples),
         "detections_total": total_dets,
         "backend": session.backend.name,
         "model": str(session.model_path),
-        "providers_active": session.backend.info().get("providers_active"),
+        "specialists": [str(s.path) for s in session.specialist_backends],
+        "imgsz": args.imgsz,
+        "tag": args.tag or None,
+        "strict_npu": session.policy.strict_npu,
+        "providers_active": info.get("providers_active"),
+        "openvino_device_type": info.get("openvino_device_type"),
+        "fingerprint": info.get("fingerprint"),
     }
+    if iterations < 100:
+        result["note"] = "fewer than 100 iterations: treat p95/p99 as indicative only"
+    result = scrub_paths(result, root)
     print(json.dumps(result, indent=2))
     if args.out:
         out = Path(args.out)
@@ -177,8 +204,11 @@ def _policy_from_args(args: argparse.Namespace) -> "ExecutionPolicy":
         overrides["providers"] = tuple(p.strip() for p in args.providers.split(",") if p.strip())
     if args.npu_only:
         overrides["npu_only"] = True
-    if getattr(args, "strict_npu", False):
-        overrides["strict_npu"] = True
+    # None = flag not given (keep PPE_STRICT_NPU from the env); True/False = explicit, so
+    # `verify-npu --soft` really does override an env-enabled strict mode.
+    strict = getattr(args, "strict_npu", None)
+    if strict is not None:
+        overrides["strict_npu"] = bool(strict)
     if args.allow_torch:
         overrides["allow_torch"] = True
     if getattr(args, "openvino_device", None):
@@ -192,18 +222,23 @@ def _policy_from_args(args: argparse.Namespace) -> "ExecutionPolicy":
 def cmd_verify_npu(args: argparse.Namespace) -> int:
     """Prove which execution provider ran every node. Exit 0 only if nothing ran on the CPU."""
     from ppe.runtime.config import resolve_model_path
+    from ppe.runtime.fingerprint import scrub_paths
     from ppe.runtime.placement import verify_placement
 
     root = _repo_root()
-    args.strict_npu = not args.soft
+    args.strict_npu = not args.soft  # explicit either way: --soft overrides PPE_STRICT_NPU
     policy = _policy_from_args(args)
     try:
         model = resolve_model_path(args.weights, prefer_onnx=True, repo_root=root)
         report = verify_placement(model, policy, runs=args.runs)
-    except RuntimeError as exc:
-        # Strict-mode refusals (no NPU EP, dynamic shape, CPU-resident op) are results, not crashes.
-        print(json.dumps({"ok": False, "strict_npu": policy.strict_npu, "error": str(exc)}, indent=2))
+    except Exception as exc:  # noqa: BLE001 - a diagnostic must always emit machine-readable JSON
+        # Strict refusals (no NPU EP, dynamic shape, CPU-resident op), a missing model, or an ORT
+        # failure are *results* for scripts and CI to parse, not tracebacks.
+        err = {"ok": False, "strict_npu": policy.strict_npu, "error_type": type(exc).__name__,
+               "error": str(exc)}
+        print(json.dumps(scrub_paths(err, root), indent=2))
         return 1
+    report = scrub_paths(report, root)  # committed evidence must not carry local absolute paths
     print(json.dumps(report, indent=2))
     if args.out:
         out = Path(args.out)
@@ -272,7 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--source", type=str, default=None, help="Image or video path (omit for synthetic)")
     p.add_argument("--providers", type=str, default="", help="Comma list, e.g. openvino,cpu")
     p.add_argument("--npu-only", action="store_true")
-    p.add_argument("--strict-npu", action="store_true", help="No CPU EP, no CPU fallback, static shapes")
+    p.add_argument("--strict-npu", action="store_true", default=None, help="No CPU EP, no CPU fallback, static shapes")
     p.add_argument("--allow-torch", action="store_true")
     p.add_argument(
         "--openvino-device",
@@ -288,8 +323,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--conf", type=float, default=0.25)
-    p.add_argument("--warmup", type=int, default=5)
-    p.add_argument("--max-frames", type=int, default=100)
+    p.add_argument("--warmup", type=int, default=20, help="Untimed runs (NPU compile/autotune)")
+    p.add_argument("--iterations", type=int, default=300, help="Timed predictions (frames are cycled)")
+    p.add_argument("--max-frames", type=int, default=100, help="Max frames read from a video source")
+    p.add_argument("--tag", type=str, default="", help="Free-form label stored in the result")
     p.add_argument("--out", type=Path, default=None)
     p.set_defaults(func=cmd_bench)
 
@@ -319,7 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--source", type=str, required=True)
     p.add_argument("--providers", type=str, default="")
     p.add_argument("--npu-only", action="store_true")
-    p.add_argument("--strict-npu", action="store_true", help="No CPU EP, no CPU fallback, static shapes")
+    p.add_argument("--strict-npu", action="store_true", default=None, help="No CPU EP, no CPU fallback, static shapes")
     p.add_argument("--allow-torch", action="store_true")
     p.add_argument(
         "--openvino-device",
@@ -344,7 +381,11 @@ def main(argv: list[str] | None = None) -> int:
     _ensure_path()
     parser = build_parser()
     args = parser.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except FileNotFoundError as exc:
+        # A missing model/source is a usage problem: one line, not a traceback.
+        raise SystemExit(f"ppe {args.command}: {exc}") from exc
 
 
 if __name__ == "__main__":

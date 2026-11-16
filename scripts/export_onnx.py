@@ -11,7 +11,7 @@ _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-from _common import REPO_ROOT  # noqa: E402
+from _common import REPO_ROOT, ensure_repo_on_path  # noqa: E402
 from eval import resolve_weights  # noqa: E402
 
 
@@ -47,52 +47,29 @@ def main() -> int:
     weights = resolve_weights(args.weights)
     if weights is None:
         raise SystemExit("No weights found. Pass --weights path/to/best.pt")
-
-    if args.format == "openvino":
-        print(
-            f"Export OpenVINO IR from {weights} imgsz={args.imgsz} "
-            f"dynamic={args.dynamic} half={args.half}"
-        )
-        if args.dry_run:
-            print("Dry-run: would write a *_openvino_model/ directory next to the source weights")
-            return 0
-        from ultralytics import YOLO
-
-        model = YOLO(str(weights))
-        exported = model.export(
-            format="openvino",
-            imgsz=args.imgsz,
-            dynamic=args.dynamic,
-            half=args.half,
-        )
-        print(f"Wrote {exported}")
-        return 0
+    ensure_repo_on_path()
+    from ppe.tools.export import export_model  # the implementation ships in the package (ppe export)
 
     dest = args.out if args.out.is_absolute() else REPO_ROOT / args.out
+    target = "a *_openvino_model/ directory next to the source weights" if args.format == "openvino" else dest
     print(
-        f"Export ONNX from {weights} imgsz={args.imgsz} dynamic={args.dynamic} "
-        f"opset={args.opset} -> {dest}"
+        f"Export {args.format} from {weights} imgsz={args.imgsz} dynamic={args.dynamic} "
+        f"half={args.half} opset={args.opset} -> {target}"
     )
     if args.dry_run:
-        print(f"Dry-run: would write {dest}")
+        print(f"Dry-run: would write {target}")
         return 0
-
-    from ultralytics import YOLO
-
-    model = YOLO(str(weights))
-    exported = model.export(
-        format="onnx",
+    written = export_model(
+        weights,
+        dest,
         imgsz=args.imgsz,
         dynamic=args.dynamic,
         simplify=args.simplify,
         half=args.half,
         opset=args.opset,
+        fmt=args.format,
     )
-    exported_path = Path(str(exported))
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    if exported_path.resolve() != dest.resolve():
-        dest.write_bytes(exported_path.read_bytes())
-    print(f"Wrote {dest}")
+    print(f"Wrote {written}")
     return 0
 
 

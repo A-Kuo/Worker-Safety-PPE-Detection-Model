@@ -29,7 +29,7 @@ import argparse
 import sys
 from pathlib import Path
 
-_SCRIPTS = Path(__file__).resolve().parent
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"  # live scripts/ (holds _common.py)
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 

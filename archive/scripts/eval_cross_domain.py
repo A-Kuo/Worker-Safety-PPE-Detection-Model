@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-_SCRIPTS = Path(__file__).resolve().parent
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"  # live scripts/ (holds _common.py)
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
@@ -35,12 +35,12 @@ DOMAIN_DEFAULTS = {
     "construction": [
         REPO_ROOT / "data" / "processed" / "construction" / "data.yaml",
         REPO_ROOT / "data" / "raw" / "construction" / "data.yaml",
-        REPO_ROOT / "configs" / "data" / "construction.yaml",
+        REPO_ROOT / "archive" / "configs" / "data" / "construction.yaml",
     ],
     "hhu": [
         REPO_ROOT / "data" / "processed" / "hardhat" / "data.yaml",
         REPO_ROOT / "data" / "raw" / "hardhat" / "data.yaml",
-        REPO_ROOT / "configs" / "data" / "hardhat_eval.yaml",
+        REPO_ROOT / "archive" / "configs" / "data" / "hardhat_eval.yaml",
     ],
 }
 

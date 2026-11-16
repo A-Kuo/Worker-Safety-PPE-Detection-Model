@@ -1,5 +1,5 @@
 {
-  "model": "C:\\GitHub\\Worker Safety PPE Detection Model\\.claude\\worktrees\\npu-first-vest\\archive\\baselines\\snehilsanyal_yolov8n_css\\models\\best.onnx",
+  "model": "<repo>/archive/baselines/snehilsanyal_yolov8n_css/models/best.onnx",
   "strict_npu": true,
   "providers_requested": [
     "OpenVINOExecutionProvider"
@@ -21,5 +21,41 @@
   "npu_fraction": 1.0,
   "cpu_resident": [],
   "transfer_nodes": 0,
-  "accelerator_nodes": 1
+  "accelerator_nodes": 1,
+  "fingerprint": {
+    "python": "3.12.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "onnxruntime": {
+      "distribution": "onnxruntime-openvino",
+      "version": "1.24.1",
+      "module_version": "1.24.1",
+      "available_providers": [
+        "OpenVINOExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "openvino": {
+      "version": "2025.4.1-20426-82bbf0292c5-releases/2025/4",
+      "devices": {
+        "CPU": {
+          "name": "Intel(R) Core(TM) Ultra 7 256V"
+        },
+        "GPU": {
+          "name": "Intel(R) Arc(TM) 140V GPU (8GB) (iGPU)"
+        },
+        "NPU": {
+          "name": "Intel(R) AI Boost",
+          "driver_version": "1005540"
+        }
+      }
+    },
+    "model": {
+      "path": "<repo>/archive/baselines/snehilsanyal_yolov8n_css/models/best.onnx",
+      "bytes": 12272870,
+      "sha256": "6d674fc99f6f3c611901c433d3f758118ce99a33990af9a0bf09690726c5b245",
+      "opset": 17
+    }
+  }
 }

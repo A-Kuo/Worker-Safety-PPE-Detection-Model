@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Audit the inherited Construction YOLOv8n baseline (Snehil Sanyal).
 
-Loads ``baselines/snehilsanyal_yolov8n_css/models/best.pt`` (fallback
+Loads ``archive/baselines/snehilsanyal_yolov8n_css/models/best.pt`` (fallback
 ``models/best.pt``), runs Ultralytics val if Construction images exist, and
 always writes per-epoch global metrics from ``results.csv`` into
 ``docs/baseline.md``.
@@ -13,7 +13,7 @@ import argparse
 import sys
 from pathlib import Path
 
-_SCRIPTS = Path(__file__).resolve().parent
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"  # live scripts/ (holds _common.py)
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
@@ -31,7 +31,7 @@ from _common import (  # noqa: E402
     resolve_results_csv,
 )
 
-DOCS_BASELINE = REPO_ROOT / "docs" / "baseline.md"
+DOCS_BASELINE = REPO_ROOT / "archive" / "docs" / "baseline.md"
 
 
 def _parse_args() -> argparse.Namespace:

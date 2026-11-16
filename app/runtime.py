@@ -64,6 +64,10 @@ def _default_openvino_device(*, prefer_npu: bool) -> str | None:
     env = os.environ.get("PPE_OPENVINO_DEVICE")
     if env and env.strip():
         return env.strip()
+    if os.environ.get("PPE_STRICT_NPU", "").strip().lower() in {"1", "true", "yes", "on"}:
+        # Strict mode pins OpenVINO to the NPU itself and refuses AUTO/GPU/CPU, which can land on the
+        # iGPU or CPU; returning a device here would make the strict app unable to start.
+        return None
     if prefer_npu:
         # Intel AI Boost NPU first, Arc iGPU next — ignored when OpenVINO EP is absent.
         return "AUTO:NPU,GPU"
@@ -249,16 +253,20 @@ def runtime_status(*, prefer_npu: bool | None = None) -> dict[str, Any]:
             npu_only=env_npu if env_npu is not None else False,
             openvino_device_type=_default_openvino_device(prefer_npu=prefer_npu),
         )
+        # Use the *effective* values: PPE_STRICT_NPU implies npu_only, no CPU EP and an NPU-pinned
+        # OpenVINO device, so the status must describe the session that would really open.
         resolved = resolve_providers(
             policy.providers or None,
-            npu_only=policy.npu_only,
-            allow_cpu_fallback=policy.allow_cpu_fallback,
+            npu_only=policy.effective_npu_only,
+            allow_cpu_fallback=policy.effective_allow_cpu_fallback,
+            exclude_cpu=policy.strict_npu,
         )
         return {
             "prefer_npu": prefer_npu,
-            "npu_only": policy.npu_only,
+            "npu_only": policy.effective_npu_only,
+            "strict_npu": policy.strict_npu,
             "local_only": local_only(),
-            "openvino_device_type": policy.openvino_device_type,
+            "openvino_device_type": policy.effective_openvino_device,
             "resolved_providers": resolved,
             "catalog": provider_status(),
             "describe": describe_runtime(),

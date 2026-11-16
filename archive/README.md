@@ -16,8 +16,10 @@ Layout mirrors the repo root so a file can be restored with `git mv archive/<pat
 | `configs/data/construction.yaml`, `hardhat_eval.yaml` | Eval-only data configs for the archived eval scripts. |
 | `configs/models/registry.yaml`, `models/pretrained/manifest.json` | Checkpoint candidate ledger and fetch manifest. |
 
-Archived scripts import `_common.py` / `eval.py` from `scripts/` and resolve the repo root relative
-to it, so they are **reference copies**: restore them to `scripts/` before running.
+Archived scripts still run from `archive/scripts/`: they import `_common.py` / `eval.py` from the
+live `scripts/` directory and read their configs, manifest and docs from `archive/`. They need the
+training-side dependencies (`ultralytics`), and `tests/test_review_fixes.py` checks that each one
+imports and shows `--help`.
 
 ## Still in place on purpose
 

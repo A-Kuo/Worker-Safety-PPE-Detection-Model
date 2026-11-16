@@ -167,7 +167,9 @@ class _Inp:
 def _fake_session_cls(shape, fail=False):
     class _S:
         def __init__(self, model_path, providers=None, provider_options=None, sess_options=None):
-            if fail:
+            # fail=True: always raises. fail="npu": raises only when an NPU EP is requested, i.e. a
+            # genuine placement failure (the model itself still loads on the plain CPU EP).
+            if fail is True or (fail == "npu" and providers != ["CPUExecutionProvider"]):
                 raise RuntimeError("Could not find an implementation for NodeX")
             self.providers = providers
             self.sess_options = sess_options
@@ -203,7 +205,7 @@ def test_backend_strict_wraps_cpu_fallback_refusal(monkeypatch, tmp_path):
 
     from ppe.runtime.backends import OnnxRuntimeBackend
 
-    monkeypatch.setattr(ort, "InferenceSession", _fake_session_cls([1, 3, 640, 640], fail=True))
+    monkeypatch.setattr(ort, "InferenceSession", _fake_session_cls([1, 3, 640, 640], fail="npu"))
     monkeypatch.setattr("ppe.runtime.providers.available_ort_names", lambda: [OV, CPU])
     with pytest.raises(RuntimeError, match="Strict NPU mode.*could not be placed entirely"):
         OnnxRuntimeBackend(_model(tmp_path), ExecutionPolicy(strict_npu=True, providers=("openvino",)))
@@ -257,8 +259,9 @@ def test_strict_refuses_non_npu_openvino_device(monkeypatch, device):
 def test_non_strict_allows_other_openvino_devices(monkeypatch):
     monkeypatch.setattr("ppe.runtime.providers.available_ort_names", lambda: [OV, CPU])
     providers, options = plan_providers(ExecutionPolicy(providers=("openvino",), openvino_device_type="GPU"))
-    assert providers == [OV, CPU] or providers == [OV]
-    assert options[0] == {"device_type": "GPU"}
+    # Non-strict keeps the CPU EP as the fallback (appended after the pinned accelerator).
+    assert providers == [OV, CPU]
+    assert options == [{"device_type": "GPU"}, {}]
 
 
 def _session_with_active(active):

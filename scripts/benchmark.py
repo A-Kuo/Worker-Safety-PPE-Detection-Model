@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Latency / FPS / memory: PyTorch vs ONNX Runtime at 640x640 and 960x540."""
+"""Latency / FPS / memory: PyTorch vs ONNX Runtime at 640x640 and 960x540.
+
+Training-side comparison (needs torch + ultralytics; mean latency on a blank frame). For on-device
+numbers use ``ppe bench`` instead: real frames, p50/p95/p99, per-stage breakdown, strict-NPU mode and a
+reproducibility fingerprint. The raw-ORT row here uses the runtime's provider resolution (honors
+``PPE_PROVIDERS`` / ``PPE_NPU_ONLY``) rather than a hardcoded CUDA provider, and records which
+providers were actually active.
+"""
 
 from __future__ import annotations
 
@@ -131,12 +138,27 @@ def main() -> int:
     pt_model = YOLO(str(weights))
     onnx_model = YOLO(str(onnx_path)) if onnx_path else None
     ort_session = None
+    ort_providers_active: list[str] | None = None
     if onnx_path:
         try:
             import onnxruntime as ort
 
-            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            src = str(REPO_ROOT / "src")
+            if src not in sys.path:
+                sys.path.insert(0, src)
+            from ppe.runtime.config import ExecutionPolicy
+            from ppe.runtime.providers import prepare_ort_environment, resolve_providers
+
+            policy = ExecutionPolicy.from_env()
+            providers = resolve_providers(
+                policy.providers or None,
+                npu_only=policy.effective_npu_only,
+                allow_cpu_fallback=policy.effective_allow_cpu_fallback,
+                exclude_cpu=policy.strict_npu,
+            )
+            prepare_ort_environment()
             ort_session = ort.InferenceSession(str(onnx_path), providers=providers)
+            ort_providers_active = list(ort_session.get_providers())
         except Exception as exc:  # noqa: BLE001
             print(f"Raw ORT unavailable: {exc}", file=sys.stderr)
 
@@ -173,7 +195,16 @@ def main() -> int:
 
         if ort_session is not None:
             raw = _time_ort(ort_session, image, args.warmup, args.iters)
-            rows.append({"backend": "raw_ort", "size": size_name, **raw, "rss_mb": _rss_mb(), "vram_mb": _vram_mb()})
+            rows.append(
+                {
+                    "backend": "raw_ort",
+                    "size": size_name,
+                    **raw,
+                    "providers_active": ort_providers_active,
+                    "rss_mb": _rss_mb(),
+                    "vram_mb": _vram_mb(),
+                }
+            )
 
     payload = {**plan, "results": rows}
     args.out.parent.mkdir(parents=True, exist_ok=True)

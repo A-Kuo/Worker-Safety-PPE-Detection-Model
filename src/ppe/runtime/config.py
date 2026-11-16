@@ -141,7 +141,9 @@ def resolve_model_path(
     repo_root: Path | None = None,
 ) -> Path:
     """Resolve a model artifact: ONNX preferred, then INT8, then .pt."""
-    root = repo_root or Path.cwd()
+    from ppe.paths import model_dir, project_root
+
+    root = repo_root or project_root()
     if explicit:
         path = Path(explicit).expanduser()
         if not path.is_absolute():
@@ -154,6 +156,9 @@ def resolve_model_path(
     onnx_first = [
         root / "models" / "best.int8.onnx",
         root / "models" / "best.onnx",
+        root / "models" / "vest_specialist.onnx",
+        # Per-user model store (PPE_MODEL_DIR or ~/.ppe/models): what a wheel install finds.
+        model_dir() / "vest_specialist.onnx",
         root / "runs" / "train" / "e4_full44k" / "weights" / "best.onnx",
         root / "runs" / "train" / "e0_n" / "weights" / "best.onnx",
         root / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.onnx",
@@ -169,7 +174,8 @@ def resolve_model_path(
         if cand.is_file():
             return cand
     raise FileNotFoundError(
-        "No model found. Export ONNX first or pass --weights path/to/model.onnx|.pt"
+        "No model found. Pass --weights path/to/model.onnx, or put vest_specialist.onnx in "
+        f"{root / 'models'} or {model_dir()} (override with PPE_MODEL_DIR)."
     )
 
 

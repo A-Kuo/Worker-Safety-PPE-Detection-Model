@@ -5,10 +5,10 @@ Downloads one file from a Hugging Face Hub repo at an explicit, pinned
 revision (commit SHA — never "latest"), copies it into
 ``models/pretrained/<name>/``, and records provenance (repo_id, filename,
 revision, license, sha256, fetched_at, fetched_by) in
-``models/pretrained/manifest.json``.
+``archive/models/pretrained/manifest.json``.
 
 Loading a third-party ``.pt`` file involves ``torch``/pickle deserialization.
-Always pass the exact commit SHA you vetted (see ``configs/models/registry.yaml``)
+Always pass the exact commit SHA you vetted (see ``archive/configs/models/registry.yaml``)
 as ``--revision`` — never a mutable ref like "main" — so a later change to the
 upstream repo cannot silently swap the weights you already vetted.
 """
@@ -22,13 +22,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_SCRIPTS = Path(__file__).resolve().parent
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"  # live scripts/ (holds _common.py)
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 from _common import REPO_ROOT, link_or_copy  # noqa: E402
 
-MANIFEST_PATH = REPO_ROOT / "models" / "pretrained" / "manifest.json"
+MANIFEST_PATH = REPO_ROOT / "archive" / "models" / "pretrained" / "manifest.json"
 
 
 def _parse_args() -> argparse.Namespace:

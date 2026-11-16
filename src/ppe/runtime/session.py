@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -36,16 +38,60 @@ class EdgeSession:
     # Backward-compatible alias: first specialist backend, or None.
     specialist_backend: InferenceBackend | None = None
 
+    def __post_init__(self) -> None:
+        self._tls = threading.local()
+
+    @property
+    def last_timings(self) -> dict[str, float]:
+        """Stage timings (ms) of this thread's last ``predict``, summed over the main model and every
+        specialist, plus ``merge_ms`` (merge + per-class filter) and ``total_ms``. Stages a backend
+        can't split out are absent; ``total_ms`` is always the wall time of ``predict``."""
+        return dict(getattr(self._tls, "timings", {}))
+
     def predict(self, image_bgr: np.ndarray) -> list[Detection]:
+        t_start = time.perf_counter()
         floor = effective_floor(self.policy.conf, self.policy.class_conf)
-        detections = self.backend.predict(image_bgr, conf=floor)
+        stages: dict[str, float] = {}
+        merge_s = 0.0
+
+        def _collect(backend: InferenceBackend) -> None:
+            # Duck-typed backends (tests, third-party) may not expose stage timings.
+            for key, ms in getattr(backend, "last_timings", {}).items():
+                stages[key] = stages.get(key, 0.0) + ms
+
+        # Preprocess once and share it when every backend is an ONNX backend of the same imgsz
+        # (the NPU path). Duck-typed on prepare/predict_prepared so Torch and test doubles still work.
+        share = bool(self.specialist_backends) and all(
+            hasattr(b, "prepare")
+            and hasattr(b, "predict_prepared")
+            and b.policy.imgsz == self.backend.policy.imgsz
+            for b in (self.backend, *(s.backend for s in self.specialist_backends))
+        )
+        prepared = None
+        if share:
+            t_p = time.perf_counter()
+            prepared = self.backend.prepare(image_bgr)
+            pre_ms = (time.perf_counter() - t_p) * 1000.0
+            detections = self.backend.predict_prepared(prepared, conf=floor, preprocess_ms=pre_ms)
+        else:
+            detections = self.backend.predict(image_bgr, conf=floor)
+        _collect(self.backend)
         for slot in self.specialist_backends:
-            detections = merge_detections(
-                detections,
-                slot.backend.predict(image_bgr, conf=floor),
-                replace=slot.replace,
-            )
-        return filter_detections(detections, self.policy.conf, self.policy.class_conf)
+            if share:
+                spec = slot.backend.predict_prepared(prepared, conf=floor)
+            else:
+                spec = slot.backend.predict(image_bgr, conf=floor)
+            _collect(slot.backend)
+            t_m = time.perf_counter()
+            detections = merge_detections(detections, spec, replace=slot.replace)
+            merge_s += time.perf_counter() - t_m
+        t_m = time.perf_counter()
+        result = filter_detections(detections, self.policy.conf, self.policy.class_conf)
+        merge_s += time.perf_counter() - t_m
+        stages["merge_ms"] = merge_s * 1000.0
+        stages["total_ms"] = (time.perf_counter() - t_start) * 1000.0
+        self._tls.timings = stages
+        return result
 
     def predict_and_comply(
         self, image_bgr: np.ndarray
@@ -190,5 +236,6 @@ def _replace_classes_from_backend(backend: InferenceBackend) -> frozenset[str]:
 
 
 def _default_root() -> Path:
-    # src/ppe/runtime/session.py → repo root is parents[3]
-    return Path(__file__).resolve().parents[3]
+    from ppe.paths import project_root
+
+    return project_root()

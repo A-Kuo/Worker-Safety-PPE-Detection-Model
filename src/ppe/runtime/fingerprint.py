@@ -110,10 +110,39 @@ def runtime_fingerprint(model_path: str | Path | None = None) -> dict[str, Any]:
     }
     if model_path is not None:
         p = Path(model_path)
-        fp["model"] = {
-            "path": str(p),
-            "bytes": p.stat().st_size if p.is_file() else None,
-            "sha256": file_sha256(p),
-            "opset": onnx_opset(p) if p.is_file() else None,
-        }
+        if p.is_file():
+            st = p.stat()
+            sha, opset = _model_identity(str(p), st.st_mtime_ns, st.st_size)
+            fp["model"] = {"path": str(p), "bytes": st.st_size, "sha256": sha, "opset": opset}
+        else:
+            fp["model"] = {"path": str(p), "bytes": None, "sha256": None, "opset": None}
     return fp
+
+
+@lru_cache(maxsize=32)
+def _model_identity(path: str, mtime_ns: int, size: int) -> tuple[str | None, int | None]:
+    """SHA-256 and opset of a model file, cached by (path, mtime, size).
+
+    Hashing re-reads the whole file and ``onnx.load`` parses the full protobuf, so doing it for the main
+    model and every specialist at each session open was avoidable startup cost. mtime/size are part of
+    the key, so an edited or replaced file is re-hashed.
+    """
+    return file_sha256(path), onnx_opset(path)
+
+
+def scrub_paths(obj: Any, root: str | Path) -> Any:
+    """Replace the absolute repo ``root`` prefix in every string with ``<repo>`` (forward slashes).
+
+    Result files get committed as evidence; absolute paths leak the author's directory layout and make
+    otherwise identical runs differ between machines.
+    """
+    prefixes = {str(root), str(root).replace("\\", "/")}
+    if isinstance(obj, dict):
+        return {k: scrub_paths(v, root) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [scrub_paths(v, root) for v in obj]
+    if isinstance(obj, str):
+        for prefix in prefixes:
+            if obj.startswith(prefix):
+                return "<repo>" + obj[len(prefix):].replace("\\", "/")
+    return obj

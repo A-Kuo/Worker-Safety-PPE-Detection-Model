@@ -105,21 +105,21 @@ def first_existing(*paths: Path) -> Path | None:
 
 def resolve_baseline_weights() -> Path | None:
     return first_existing(
-        REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
+        REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
         REPO_ROOT / "models" / "best.pt",
     )
 
 
 def resolve_results_csv() -> Path | None:
     return first_existing(
-        REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "results" / "results.csv",
+        REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "results" / "results.csv",
         REPO_ROOT / "results" / "results.csv",
     )
 
 
 def resolve_confusion_matrix() -> Path | None:
     return first_existing(
-        REPO_ROOT / "baselines" / "snehilsanyal_yolov8n_css" / "results" / "confusion_matrix.png",
+        REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "results" / "confusion_matrix.png",
         REPO_ROOT / "results" / "confusion_matrix.png",
     )
 
@@ -151,7 +151,7 @@ def find_construction_image_root() -> Path | None:
 def find_construction_yaml() -> Path | None:
     return first_existing(
         REPO_ROOT / "data" / "raw" / "construction" / "data.yaml",
-        REPO_ROOT / "configs" / "data" / "construction.yaml",
+        REPO_ROOT / "archive" / "configs" / "data" / "construction.yaml",
         REPO_ROOT / "data" / "data.yaml",
     )
 

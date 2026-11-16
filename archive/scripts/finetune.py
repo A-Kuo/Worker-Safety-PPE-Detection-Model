@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fine-tune a pretrained external checkpoint on a small gap dataset.
 
-Reads ``configs/finetune/<exp>.yaml``. Unlike ``scripts/train.py`` (which
+Reads ``archive/configs/finetune/<exp>.yaml``. Unlike ``scripts/train.py`` (which
 starts every experiment from Ultralytics COCO-pretrained ``yolov8n.pt`` /
 ``yolov8s.pt``), this script *requires* a local ``base_checkpoint`` — an
 already-fetched, pinned external checkpoint (see ``scripts/fetch_checkpoint.py``)
@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-_SCRIPTS = Path(__file__).resolve().parent
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"  # live scripts/ (holds _common.py)
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
@@ -38,7 +38,7 @@ from _common import (  # noqa: E402
     validate_train_kwargs,
 )
 
-CONFIG_DIR = REPO_ROOT / "configs" / "finetune"
+CONFIG_DIR = REPO_ROOT / "archive" / "configs" / "finetune"
 # Keys that are documentation / our CLI, not Ultralytics train() kwargs.
 META_KEYS = {"experiment", "base_checkpoint"}
 
@@ -51,7 +51,7 @@ def _available_experiments() -> list[str]:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--exp", required=True, help="configs/finetune/<exp>.yaml")
+    parser.add_argument("--exp", required=True, help="archive/configs/finetune/<exp>.yaml")
     parser.add_argument("--config", type=Path, default=None, help="Override yaml path")
     parser.add_argument(
         "--base-checkpoint",

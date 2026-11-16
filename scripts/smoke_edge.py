@@ -42,16 +42,23 @@ def _ensure_onnx(weights: Path, onnx_path: Path, imgsz: int = 640) -> Path:
     if not weights.is_file():
         raise SystemExit(f"Neither ONNX ({onnx_path}) nor source weights ({weights}) found")
     print(f"exporting {weights} -> {onnx_path}")
+    import shutil
+    import tempfile
+
     from ultralytics import YOLO
 
     onnx_path.parent.mkdir(parents=True, exist_ok=True)
-    model = YOLO(str(weights))
-    exported = Path(
-        model.export(format="onnx", imgsz=imgsz, dynamic=False, simplify=True, opset=17)
-    )
-    # Ultralytics writes next to the .pt; copy/rename into models/best.onnx.
-    if exported.resolve() != onnx_path.resolve():
-        onnx_path.write_bytes(exported.read_bytes())
+    # Ultralytics writes the export next to the .pt it was given. Exporting from the tracked weights
+    # in place would overwrite the committed archive/baselines/.../best.onnx on every run (same size,
+    # different bytes, dirty tree). Export from a scratch copy instead.
+    with tempfile.TemporaryDirectory(prefix="ppe_smoke_export_") as tmp:
+        scratch = Path(tmp) / weights.name
+        shutil.copy2(weights, scratch)
+        model = YOLO(str(scratch))
+        exported = Path(
+            model.export(format="onnx", imgsz=imgsz, dynamic=False, simplify=True, opset=17)
+        )
+        shutil.copy2(exported, onnx_path)
     return onnx_path
 
 

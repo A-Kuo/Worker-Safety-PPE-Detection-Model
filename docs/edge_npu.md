@@ -152,6 +152,29 @@ ppe predict --weights models/best.onnx --source archive/baselines/snehilsanyal_y
 
 `ppe predict` / `open_session` attach every specialist on the same provider list as the main model. If a `.pt` path is given while `PPE_PREFER_ONNX=1`, an adjacent `.onnx` / `.int8.onnx` sibling is preferred automatically.
 
+## Measured latency (Intel Lunar Lake)
+
+`ppe bench` reports p50/p95/p99, a per-stage breakdown (`preprocess_ms`, `infer_ms`, `postprocess_ms`) and a reproducibility fingerprint. Raw results live in `results/bench/` (repo paths scrubbed).
+
+**Setup:** Core Ultra 7 256V (NPU "Intel AI Boost" driver 1005540, Arc 140V iGPU), `onnxruntime-openvino` 1.24.1 + `openvino` 2025.4.1, FP32 ONNX, static 640x640, one real 1024x683 frame, 300 timed iterations after 20 warmup. **The model is the inherited Construction YOLOv8n baseline, not a vest model** — these numbers characterize the runtime, not vest accuracy. Single machine, not an isolated rig (normal Windows background load).
+
+| device | p50 before | p50 after | p95 after | p99 after |
+|---|---|---|---|---|
+| NPU (strict) | 14.6 ms | **5.5–6.2 ms** (3 runs) | 6.8–12.8 | 7.5–31.9 |
+| iGPU (OpenVINO GPU) | 13.7 | 4.3 | 8.7 | 19.9 |
+| CPU (OpenVINO CPU) | 50.0 | 36.0 | 82.8 | 159.9 |
+| CPU (ORT CPU EP) | 444 | 363 | 586 | 1678 |
+
+"Before" is the same code without the preprocessing change. Take-aways:
+
+- **Preprocessing was 38% of an NPU frame**, not the NMS (decode + NMS is ~0.6 ms). `Letterboxer` reuses buffers and writes a contiguous NCHW tensor: 4.7 → 1.1 ms with bit-identical output (`tests/test_letterbox.py` checks exact equality against the old implementation).
+- **The inference stage also dropped (7.9 → ~3.8 ms)** because the old tensor was a non-contiguous view and ORT copied it inside `session.run`. A controlled A/B in one session, alternating inputs, measured the hidden copy at **+2.8 ms on the NPU and +3.2 ms on the iGPU**.
+- Specialists now share one preprocessing pass per frame (was one per model). Not yet measured on real vest/helmet specialists — none are checked in.
+- **On this model the iGPU is faster than the NPU at p50.** The NPU's case is offload and the strict no-CPU/no-iGPU guarantee, not raw speed; power draw has not been measured here, so no efficiency claim is made.
+- Tail latency (p99) is noisy run to run on this machine. Do not quote p99 from these runs; re-measure on an idle, plugged-in system before publishing a tail figure.
+
+Reproduce: `ppe bench --weights <model.onnx> --source <frame.jpg> --strict-npu --providers openvino --iterations 300 --warmup 20 --out results/bench/<name>.json`.
+
 ## Accuracy note
 
 INT8 dynamic quantization is a **best-effort** edge appendix. Re-check vest / helmet metrics after quantize; use static calibration images when mAP drops too far. Training accuracy work (Colab/Kaggle E0–E4) is separate from this runtime path.
