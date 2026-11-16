@@ -320,13 +320,13 @@ def test_pipeline_module_has_no_gui_import():
 def test_about_carries_licence_and_source_and_the_api_root_exposes_them():
     from ppe import about
 
-    assert about.LICENSE == "AGPL-3.0" and about.SOURCE_URL.startswith("https://github.com/")
+    assert about.LICENSE == "AGPL-3.0-only" and about.SOURCE_URL.startswith("https://github.com/")
     assert about.SOURCE_URL in about.notice()
     pytest.importorskip("fastapi")
     from app.api.main import root
 
     body = root()
-    assert body["license"] == "AGPL-3.0" and body["source"] == about.SOURCE_URL
+    assert body["license"] == "AGPL-3.0-only" and body["source"] == about.SOURCE_URL
 
 
 def test_readme_does_not_tell_users_to_bind_all_interfaces():

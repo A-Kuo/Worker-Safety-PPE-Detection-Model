@@ -103,6 +103,8 @@ def first_existing(*paths: Path) -> Path | None:
     return None
 
 
+# The inherited Construction baseline's weights and plots were removed from the repository (third-party
+# files without a stated licence). These resolvers return None unless you restore them locally.
 def resolve_baseline_weights() -> Path | None:
     return first_existing(
         REPO_ROOT / "archive" / "baselines" / "snehilsanyal_yolov8n_css" / "models" / "best.pt",
