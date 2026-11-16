@@ -358,6 +358,49 @@ def cmd_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_window(args: argparse.Namespace) -> int:
+    """Live window: camera / video / image in, annotated frames and a placement-aware HUD out."""
+    from ppe.runtime import open_session
+    from ppe.window.app import print_summary, require_qt, run_window
+    from ppe.window.pipeline import open_source
+
+    root = _repo_root()
+    try:
+        require_qt()
+    except RuntimeError as exc:
+        raise SystemExit(f"ppe window: {exc}") from exc
+    policy = _policy_from_args(args)
+    frames = args.frames if args.selftest else None
+    spec = args.source
+    if spec and spec.lower() != "synthetic" and not spec.lstrip("-").isdigit() and "://" not in spec:
+        spec = str(_abs(spec, root))
+    try:
+        # Strict mode refuses here if the model cannot run entirely on the NPU: no silent CPU window.
+        session = open_session(args.weights, policy=policy, repo_root=root)
+        source = open_source(spec, loop=args.loop, frames=frames)
+    except RuntimeError as exc:
+        raise SystemExit(f"ppe window: {exc}") from exc
+    summary = run_window(
+        session,
+        source,
+        selftest_frames=args.frames if args.selftest else 0,
+        record=_abs(args.record, root) if args.record else None,
+        verify=not args.no_verify,
+        out_dir=root,
+        snapshot=_abs(args.snapshot, root) if args.snapshot else None,
+    )
+    if args.selftest or summary["error"]:
+        from ppe.runtime.fingerprint import scrub_paths
+
+        print_summary(scrub_paths(summary, root))
+    if summary["error"]:
+        return 1
+    if args.selftest:
+        strict_ok = summary["placement_ok"] is True or not summary["strict_npu"] or args.no_verify
+        return 0 if summary["frames_shown"] >= args.frames and strict_ok else 1
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ppe", description="PPE edge inference CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -456,6 +499,28 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tag", type=str, default="")
     p.add_argument("--out", type=Path, default=None)
     p.set_defaults(func=cmd_eval)
+
+    p = sub.add_parser("window", help="Live window with HUD (needs the `gui` extra: PySide6)")
+    p.add_argument("--weights", type=Path, default=None)
+    p.add_argument("--source", type=str, default="0",
+                   help="Camera index (default 0), video file / URL, image file, or `synthetic`")
+    p.add_argument("--providers", type=str, default="")
+    p.add_argument("--npu-only", action="store_true")
+    p.add_argument("--strict-npu", action="store_true", default=None,
+                   help="Refuse to start unless the model runs entirely on the NPU")
+    p.add_argument("--allow-torch", action="store_true")
+    p.add_argument("--openvino-device", type=str, default="")
+    p.add_argument("--specialists", type=str, default="")
+    p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--conf", type=float, default=0.30, help="Detection threshold (+/- keys change it live)")
+    p.add_argument("--loop", action="store_true", help="Restart a video file when it ends")
+    p.add_argument("--record", type=Path, default=None, help="Save the annotated stream to this .mp4")
+    p.add_argument("--snapshot", type=Path, default=None, help="Save the last displayed frame (with HUD) as an image")
+    p.add_argument("--no-verify", action="store_true", help="Skip the background placement check")
+    p.add_argument("--selftest", action="store_true",
+                   help="Show --frames frames, print a JSON summary and exit (CI / first-run check)")
+    p.add_argument("--frames", type=int, default=60)
+    p.set_defaults(func=cmd_window)
 
     p = sub.add_parser("predict", help="Run one image through the edge session")
     p.add_argument("--weights", type=Path, default=None)

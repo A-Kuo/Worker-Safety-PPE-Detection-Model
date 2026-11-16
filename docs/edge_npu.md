@@ -158,6 +158,23 @@ Accuracy with confidence intervals, the INT8 result and the latency table for th
 
 **INT8 must keep the decode head in float** (`ppe quantize --static --qdq --per-channel --float-head --calibration <dir> --seed 0`). A fully quantized YOLO head scored AP50 0.0 on the CPU while the same file still worked on the NPU, so always evaluate a quantized model on every device you ship to. Dynamic INT8 (`ppe quantize` with no flags) is not recommended for this model.
 
+## Live window (`ppe window`)
+
+```powershell
+python -m pip install -e ".[npu,gui]"
+ppe window --weights models/vest_specialist.int8.onnx --strict-npu --providers openvino          # camera 0
+ppe window --source clip.mp4 --loop --weights models/vest_specialist.onnx --providers openvino
+ppe window --selftest --frames 60 --source synthetic --weights models/vest_specialist.onnx       # no camera needed
+```
+
+`--source` takes a camera index (default 0), a video file or stream URL, an image, or `synthetic`. Keys: **Space** pause, **R** record an annotated clip, **+ / -** change the threshold live, **A** about (licence, source link, model hash), **Q / Esc** quit. `--record out.mp4` records from the first frame; `--snapshot shot.png` saves the last displayed frame.
+
+The HUD's first line says where inference runs and whether that was *verified*: a background check profiles node placement once, so `OpenVINO:NPU strict | verified on NPU (100% of nodes)` is a measurement, while an iGPU or CPU run reads `not pinned to the NPU` / `NOT NPU-only (N CPU nodes)`. With `--strict-npu` the window refuses to open unless the model runs entirely on the NPU. The rest of the HUD shows FPS, frame p50/p95, per-stage milliseconds, vest / no_vest counts, the threshold and dropped frames.
+
+Capture and inference run on their own threads with a single-frame slot between them: when inference is slower than the camera the stale frame is replaced (and counted as dropped) instead of queued, so the picture stays current. Video files are paced at their own frame rate and never dropped. `--selftest` shows N frames, prints a JSON summary and exits non-zero on any failure (use `QT_QPA_PLATFORM=offscreen` on a machine without a display).
+
+The window is Qt (PySide6), not `cv2.imshow`: the package depends on `opencv-python-headless`, which has no GUI, and installing the non-headless OpenCV wheel beside it breaks `cv2`.
+
 ## Measured latency of the runtime (baseline model)
 
 `ppe bench` reports p50/p95/p99, a per-stage breakdown (`preprocess_ms`, `infer_ms`, `postprocess_ms`) and a reproducibility fingerprint. Raw results live in `results/bench/` (repo paths scrubbed).

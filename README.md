@@ -152,7 +152,7 @@ python -m pip install -r app/requirements.txt
 python -m pip install -e ".[edge]"
 
 # API
-uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.api.main:app --reload --host 127.0.0.1 --port 8000
 # or: python -m app.api.main
 
 # UI (second terminal)

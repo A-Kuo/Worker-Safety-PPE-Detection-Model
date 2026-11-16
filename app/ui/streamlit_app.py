@@ -416,5 +416,11 @@ def main() -> None:
                         st.write(line)
                 _show_workers(last_workers)
 
+    from ppe import about
+
+    # AGPL-3.0 s13: offer the source to everyone using this page over a network.
+    st.divider()
+    st.caption(f"{about.NAME} - licensed {about.LICENSE}. Source code: [{about.SOURCE_URL}]({about.SOURCE_URL})")
+
 
 main()

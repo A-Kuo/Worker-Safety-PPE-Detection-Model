@@ -194,7 +194,16 @@ app.add_middleware(
 
 @app.get("/", tags=["meta"])
 def root() -> dict[str, str]:
-    return {"service": "ppe-detection", "docs": "/docs", "health": "/health"}
+    from ppe import about
+
+    # AGPL-3.0 s13: people using this service over a network must be offered the source.
+    return {
+        "service": "ppe-detection",
+        "docs": "/docs",
+        "health": "/health",
+        "license": about.LICENSE,
+        "source": about.SOURCE_URL,
+    }
 
 
 @app.get("/health", response_model=HealthOut, tags=["meta"])
