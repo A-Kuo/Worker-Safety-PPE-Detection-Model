@@ -1,0 +1,61 @@
+{
+  "model": "<repo>/models/vest_specialist.onnx",
+  "strict_npu": true,
+  "providers_requested": [
+    "OpenVINOExecutionProvider"
+  ],
+  "providers_active": [
+    "OpenVINOExecutionProvider",
+    "CPUExecutionProvider"
+  ],
+  "providers_missing": [],
+  "openvino_device_type": "NPU",
+  "openvino_device_pinned_to_npu": true,
+  "method": "profile",
+  "ok": true,
+  "nodes_total": 1,
+  "by_provider": {
+    "OpenVINOExecutionProvider": 1
+  },
+  "npu_nodes": 1,
+  "npu_fraction": 1.0,
+  "cpu_resident": [],
+  "transfer_nodes": 0,
+  "accelerator_nodes": 1,
+  "fingerprint": {
+    "python": "3.12.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "onnxruntime": {
+      "distribution": "onnxruntime-openvino",
+      "version": "1.24.1",
+      "module_version": "1.24.1",
+      "available_providers": [
+        "OpenVINOExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "openvino": {
+      "version": "2025.4.1-20426-82bbf0292c5-releases/2025/4",
+      "devices": {
+        "CPU": {
+          "name": "Intel(R) Core(TM) Ultra 7 256V"
+        },
+        "GPU": {
+          "name": "Intel(R) Arc(TM) 140V GPU (8GB) (iGPU)"
+        },
+        "NPU": {
+          "name": "Intel(R) AI Boost",
+          "driver_version": "1005540"
+        }
+      }
+    },
+    "model": {
+      "path": "<repo>/models/vest_specialist.onnx",
+      "bytes": 12239302,
+      "sha256": "b641539a7c56036382e9418b3df7a3b3f107f62f2059b65f4d8356e77e1c96b4",
+      "opset": 17
+    }
+  }
+}

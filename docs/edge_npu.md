@@ -152,7 +152,13 @@ ppe predict --weights models/best.onnx --source archive/baselines/snehilsanyal_y
 
 `ppe predict` / `open_session` attach every specialist on the same provider list as the main model. If a `.pt` path is given while `PPE_PREFER_ONNX=1`, an adjacent `.onnx` / `.int8.onnx` sibling is preferred automatically.
 
-## Measured latency (Intel Lunar Lake)
+## Vest model on the NPU (v0.1)
+
+Accuracy with confidence intervals, the INT8 result and the latency table for the shipped vest model are in [`MODEL_CARD.md`](MODEL_CARD.md). Short version, same Lunar Lake machine: INT8 on the NPU in strict mode is the fastest configuration measured (p50 4.25-4.31 ms end to end over three runs); FP32 runs at 6.2-6.4 ms on the NPU and 5.1-5.5 ms on the iGPU. Score any model on your own labeled images with `ppe eval --weights <model.onnx> --images <dir>`.
+
+**INT8 must keep the decode head in float** (`ppe quantize --static --qdq --per-channel --float-head --calibration <dir> --seed 0`). A fully quantized YOLO head scored AP50 0.0 on the CPU while the same file still worked on the NPU, so always evaluate a quantized model on every device you ship to. Dynamic INT8 (`ppe quantize` with no flags) is not recommended for this model.
+
+## Measured latency of the runtime (baseline model)
 
 `ppe bench` reports p50/p95/p99, a per-stage breakdown (`preprocess_ms`, `infer_ms`, `postprocess_ms`) and a reproducibility fingerprint. Raw results live in `results/bench/` (repo paths scrubbed).
 
@@ -177,7 +183,7 @@ Reproduce: `ppe bench --weights <model.onnx> --source <frame.jpg> --strict-npu -
 
 ## Accuracy note
 
-INT8 dynamic quantization is a **best-effort** edge appendix. Re-check vest / helmet metrics after quantize; use static calibration images when mAP drops too far. Training accuracy work (Colab/Kaggle E0–E4) is separate from this runtime path.
+Use static QDQ quantization with `--float-head` (see "Vest model on the NPU" above) and re-check accuracy with `ppe eval` on each target device; the vest model's measured FP32-vs-INT8 numbers are in `MODEL_CARD.md`. Training accuracy work (Colab/Kaggle E0–E4) is separate from this runtime path.
 
 ## Intel Lunar Lake (AI Boost NPU + Arc iGPU)
 

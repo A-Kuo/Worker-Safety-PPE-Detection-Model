@@ -83,6 +83,11 @@ def cmd_quantize(args: argparse.Namespace) -> int:
             _abs(args.out, root) if args.out else None,
             calibration=_abs(args.calibration, root) if args.calibration else None,
             static=args.static,
+            qdq=args.qdq,
+            per_channel=args.per_channel,
+            limit=args.calibration_images,
+            seed=args.seed,
+            float_head=args.float_head,
         )
     except (RuntimeError, FileNotFoundError, ValueError) as exc:
         raise SystemExit(f"ppe quantize: {exc}") from exc
@@ -265,8 +270,14 @@ def cmd_predict(args: argparse.Namespace) -> int:
     if image is None:
         raise SystemExit(f"Failed to read {src}")
     dets, workers = session.predict_and_comply(image)
+    counts: dict[str, int] = {}
+    for d in dets:
+        counts[d.cls_name] = counts.get(d.cls_name, 0) + 1
     payload = {
         "model": str(session.model_path),
+        # Frame-level result: what a model without a `person` class (e.g. the 2-class vest
+        # specialist) can report. Per-worker compliance below needs person boxes to attach PPE to.
+        "counts": dict(sorted(counts.items())),
         "detections": [
             {"cls": d.cls_name, "conf": round(d.conf, 4), "xyxy": list(d.xyxy)} for d in dets
         ],
@@ -275,7 +286,75 @@ def cmd_predict(args: argparse.Namespace) -> int:
             for w in workers
         ],
     }
+    if not _model_classes(session) & {"person"}:
+        payload["compliance_note"] = (
+            "This model has no `person` class, so per-worker compliance is empty by design; "
+            "use `counts` / `detections` (frame-level)."
+        )
     print(json.dumps(payload, indent=2))
+    return 0
+
+
+def _model_classes(session) -> set[str]:
+    """Unified class names the session's models can emit."""
+    from ppe.runtime.backends import _to_unified
+
+    names: set[str] = set()
+    for backend in (session.backend, *(s.backend for s in session.specialist_backends)):
+        raw = getattr(backend, "class_names", None) or {}
+        names.update(_to_unified(str(v)) for v in raw.values())
+    return names
+
+
+def cmd_eval(args: argparse.Namespace) -> int:
+    """Score the shipped runtime path on a labeled image folder (YOLO labels), with counts and CIs."""
+    from ppe.evaluate import evaluate_session, list_images
+    from ppe.runtime import open_session
+    from ppe.runtime.fingerprint import scrub_paths
+
+    root = _repo_root()
+    args.conf = args.conf_floor
+    policy = _policy_from_args(args)
+    policy.class_conf = {}  # score the raw model: no per-class thresholds from the environment
+    session = open_session(args.weights, policy=policy, repo_root=root)
+    images_dir = _abs(args.images, root)
+    images = list_images(images_dir)
+    if not images:
+        raise SystemExit(f"ppe eval: no images under {images_dir}")
+    if args.names:
+        names = [n.strip() for n in args.names.split(",") if n.strip()]
+    else:
+        names = [session.backend.class_names[i] for i in sorted(session.backend.class_names)]
+    summary = evaluate_session(session, images, names, match_iou=args.match_iou)
+    info = session.backend.info()
+    result = {
+        "model": str(session.model_path),
+        "images_dir": str(images_dir),
+        "label_names": names,
+        "tag": args.tag or None,
+        "protocol": {
+            "path": "ppe runtime (ORT decode + class-agnostic NMS IoU 0.45)",
+            "conf_floor": args.conf_floor,
+            "match_iou": args.match_iou,
+            "ap": "AP50, 101-point interpolation",
+            "intervals": "Wilson 95%",
+        },
+        **summary,
+        "strict_npu": session.policy.strict_npu,
+        "providers_active": info.get("providers_active"),
+        "openvino_device_type": info.get("openvino_device_type"),
+        "fingerprint": info.get("fingerprint"),
+    }
+    result = scrub_paths(result, root)
+    brief = {
+        n: {"n_gt_boxes": c["n_gt_boxes"], "ap50": c["ap50"]} for n, c in result["per_class"].items()
+    }
+    print(json.dumps({"n_images": result["n_images"], "map50": result["map50"], "per_class": brief}, indent=2))
+    if args.out:
+        out = _abs(args.out, root)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        print(f"Wrote {out}")
     return 0
 
 
@@ -300,6 +379,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", type=Path, default=None)
     p.add_argument("--calibration", type=Path, default=None)
     p.add_argument("--static", action="store_true")
+    p.add_argument("--qdq", action="store_true", help="Static only: QDQ format, uint8 activations (NPU-friendly)")
+    p.add_argument("--per-channel", action="store_true", help="Static only: per-channel weight scales")
+    p.add_argument(
+        "--float-head",
+        action="store_true",
+        help="Static only: keep the YOLO decode head in float (required: a fully quantized head "
+        "zeroes class scores on some devices)",
+    )
+    p.add_argument("--calibration-images", type=int, default=100)
+    p.add_argument("--seed", type=int, default=None, help="Random but reproducible calibration sample")
     p.set_defaults(func=cmd_quantize)
 
     p = sub.add_parser("bench", help="Latency / FPS bench on image, video, or synthetic frame")
@@ -350,6 +439,23 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--runs", type=int, default=3, help="Profiled inferences on a zero tensor")
     p.add_argument("--out", type=Path, default=None, help="Write the JSON report here")
     p.set_defaults(func=cmd_verify_npu)
+
+    p = sub.add_parser("eval", help="Score the runtime on a labeled image folder (counts, AP50, Wilson CIs)")
+    p.add_argument("--weights", type=Path, default=None)
+    p.add_argument("--images", type=Path, required=True, help="Folder of images; labels in sibling labels/")
+    p.add_argument("--names", type=str, default="", help="Label class names in id order (default: model's)")
+    p.add_argument("--providers", type=str, default="")
+    p.add_argument("--npu-only", action="store_true")
+    p.add_argument("--strict-npu", action="store_true", default=None)
+    p.add_argument("--allow-torch", action="store_true")
+    p.add_argument("--openvino-device", type=str, default="")
+    p.add_argument("--specialists", type=str, default="")
+    p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--conf-floor", type=float, default=0.001, help="Lowest confidence kept (mAP protocol)")
+    p.add_argument("--match-iou", type=float, default=0.5)
+    p.add_argument("--tag", type=str, default="")
+    p.add_argument("--out", type=Path, default=None)
+    p.set_defaults(func=cmd_eval)
 
     p = sub.add_parser("predict", help="Run one image through the edge session")
     p.add_argument("--weights", type=Path, default=None)

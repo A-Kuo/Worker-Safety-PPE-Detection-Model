@@ -131,18 +131,24 @@ def _model_identity(path: str, mtime_ns: int, size: int) -> tuple[str | None, in
 
 
 def scrub_paths(obj: Any, root: str | Path) -> Any:
-    """Replace the absolute repo ``root`` prefix in every string with ``<repo>`` (forward slashes).
+    """Replace absolute path prefixes in every string: repo ``root`` -> ``<repo>``, home -> ``~``.
 
     Result files get committed as evidence; absolute paths leak the author's directory layout and make
-    otherwise identical runs differ between machines.
+    otherwise identical runs differ between machines. The home directory is scrubbed too, so a model
+    loaded from outside the project (e.g. ``~/.ppe/models``) does not leak the user name.
     """
-    prefixes = {str(root), str(root).replace("\\", "/")}
+    pairs = [(str(root), "<repo>"), (str(Path.home()), "~")]
+    return _scrub(obj, [(p.replace("\\", "/"), label) for p, label in pairs if p and p not in ("/", ".")])
+
+
+def _scrub(obj: Any, pairs: list[tuple[str, str]]) -> Any:
     if isinstance(obj, dict):
-        return {k: scrub_paths(v, root) for k, v in obj.items()}
+        return {k: _scrub(v, pairs) for k, v in obj.items()}
     if isinstance(obj, list):
-        return [scrub_paths(v, root) for v in obj]
+        return [_scrub(v, pairs) for v in obj]
     if isinstance(obj, str):
-        for prefix in prefixes:
-            if obj.startswith(prefix):
-                return "<repo>" + obj[len(prefix):].replace("\\", "/")
+        norm = obj.replace("\\", "/")
+        for prefix, label in pairs:
+            if norm == prefix or norm.startswith(prefix + "/"):
+                return label + norm[len(prefix):]
     return obj

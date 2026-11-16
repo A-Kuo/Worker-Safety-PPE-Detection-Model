@@ -1,0 +1,59 @@
+{
+  "what": "Ultralytics val of the Kaggle vest checkpoint and of its ONNX export on the same clean test split, tying the shipped ONNX to the training run",
+  "protocol": {
+    "validator": "ultralytics model.val",
+    "conf": 0.001,
+    "nms_iou": 0.7,
+    "imgsz": 640,
+    "batch": 1,
+    "device": "cpu",
+    "split": "data/processed/vest_specialist/test (145 images, deduplicated)"
+  },
+  "ultralytics": "8.4.212",
+  "torch": "2.15.0",
+  "onnxruntime": "1.32.0",
+  "checkpoint_pt": {
+    "sha256": "8473ca679ed5877cdbcdbc09be1f5d1284d46b5742f17e59b93418948cacaf4d",
+    "per_class": [
+      {
+        "name": "vest",
+        "precision": 0.9125534372419902,
+        "recall": 0.8433734939759037,
+        "map50": 0.9187577599602401,
+        "map50_95": 0.7044742994920911,
+        "n_gt_boxes": 249
+      },
+      {
+        "name": "no_vest",
+        "precision": 0.6746013316211805,
+        "recall": 0.7209302325581395,
+        "map50": 0.7556071042509259,
+        "map50_95": 0.4055763357806993,
+        "n_gt_boxes": 43
+      }
+    ],
+    "map50": 0.837182432105583
+  },
+  "exported_onnx": {
+    "sha256": "b641539a7c56036382e9418b3df7a3b3f107f62f2059b65f4d8356e77e1c96b4",
+    "per_class": [
+      {
+        "name": "vest",
+        "precision": 0.9368692252435564,
+        "recall": 0.8343883903899494,
+        "map50": 0.9215284736127919,
+        "map50_95": 0.7045081527364253,
+        "n_gt_boxes": 249
+      },
+      {
+        "name": "no_vest",
+        "precision": 0.7163017005985343,
+        "recall": 0.7047303706995209,
+        "map50": 0.73769963570907,
+        "map50_95": 0.39369672221886287,
+        "n_gt_boxes": 43
+      }
+    ],
+    "map50": 0.829614054660931
+  }
+}

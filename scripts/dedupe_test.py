@@ -94,6 +94,10 @@ def main() -> int:
     is_dup = nearest <= args.max_bits
     clean = [p for p, dup in zip(kept, is_dup, strict=True) if not dup]
     report = {
+        # What was measured: without these two fields a report from a subset run is indistinguishable
+        # from the full-split one (the committed report once disagreed with the docs for that reason).
+        "dataset": root.name,
+        "test_set": args.subset.name if args.subset else "full test split",
         "reference_splits": args.against, "max_bits": args.max_bits,
         "test_images": len(kept), "exact_twins": int((nearest == 0).sum()),
         "near_duplicates": int(is_dup.sum()), "clean": len(clean),
