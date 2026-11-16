@@ -1,19 +1,25 @@
 # Attribution
 
-This repository is an original rewrite. The files under
-`archive/baselines/snehilsanyal_yolov8n_css/` are **inherited third-party artifacts**,
-not work trained in this project. Do not present `models/best.pt` (now at
-`archive/baselines/snehilsanyal_yolov8n_css/models/best.pt`) as our training run.
+Licence of this project: AGPL-3.0-only (see `LICENSE` and `NOTICE`). This file credits the third-party
+work it builds on.
 
-## Inherited baseline
+## Ultralytics YOLOv8
 
-- **Author / repo:** Snehil Sanyal —
+Training and export use [Ultralytics](https://github.com/ultralytics/ultralytics) (AGPL-3.0). The
+released vest models are derived from YOLOv8n (COCO-pretrained initialization) and are distributed
+under AGPL-3.0.
+
+## Inherited baseline (not redistributed)
+
+- **Author / repo:** Snehil Sanyal,
   [snehilsanyal/Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection)
-- **What we kept:** YOLOv8n weights (`best.pt`, pretrained `yolov8n.pt`),
-  Ultralytics plots and `results.csv`, sample source media, inference outputs,
-  and the original Roboflow dataset notes / YAML.
+- **Role:** the starting point this repository was rewritten from. It is **not** a model trained here.
 - **Reported Construction v28 numbers (theirs, 100 epochs YOLOv8n):**
   mAP@0.50 = 0.809, mAP@0.50:0.95 = 0.507, precision 0.900, recall 0.731.
+- **What is still here:** the dataset notes / YAML and the training log under
+  `archive/baselines/snehilsanyal_yolov8n_css/`.
+- **What was removed:** its weights, plots, sample photographs and video. They carried no stated
+  licence. They remain in git history and are not covered by this project's licence.
 
 ## Datasets (Roboflow Universe, CC BY 4.0)
 
@@ -25,7 +31,12 @@ Use of these datasets requires attribution under
 | Construction Site Safety v28 | Inherited baseline train/eval (10 classes; `machinery` / `vehicle` stay Construction-only) | [universe.roboflow.com/.../construction-site-safety/dataset/28](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety/dataset/28) |
 | Personal Protective Equipment Combined Model v4 | Unified train set (44,002 images, 14 classes) | [universe.roboflow.com/.../personal-protective-equipment-combined-model/dataset/4](https://universe.roboflow.com/roboflow-universe-projects/personal-protective-equipment-combined-model/dataset/4) |
 | Hard Hat Universe | Held-out helmet-domain eval only (not mixed into training) | [universe.roboflow.com/.../hard-hat-universe-0dy7t](https://universe.roboflow.com/universe-datasets/hard-hat-universe-0dy7t) |
-| no-vest-detect (v1) | Gap-fill fine-tuning data for vest/no_vest reliability (998 images, ~1,112 no-vest-labeled instances) | [universe.roboflow.com/novest/no-vest-detect](https://universe.roboflow.com/novest/no-vest-detect) |
+| no-vest-detect (v1) | Extra `no_vest` data for the vest specialist (998 images, ~1,112 no-vest-labeled instances) | [universe.roboflow.com/novest/no-vest-detect](https://universe.roboflow.com/novest/no-vest-detect) |
+
+**Licence verification status.** The CC BY 4.0 statement above is taken from each dataset's Roboflow
+Universe page. It was not independently re-verified for `novest/no-vest-detect` when this release was
+prepared; check that page before redistributing anything derived from it under different terms. No
+dataset images are redistributed in this repository.
 
 Construction v28 notes that some images were cloned from Combined PPE and other
 Universe sets. Default protocol is **no merge** of Construction into Combined.

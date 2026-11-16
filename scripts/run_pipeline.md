@@ -33,12 +33,12 @@ python archive/scripts/eval_cross_domain.py --weights runs/train/e4_full44k/weig
 python scripts/calibrate.py --weights runs/train/e4_full44k/weights/best.pt
 
 # 7) Export + INT8 + edge bench (PowerShell: do not use <angle brackets> in paths)
-# Until E4 exists, swap weights for baselines/snehilsanyal_yolov8n_css/models/best.pt
+# Until E4 exists, use the released vest model (`ppe fetch-model`) for the edge steps
 python scripts/export_onnx.py --weights runs/train/e4_full44k/weights/best.pt --out models/best.onnx
 python scripts/quantize_onnx.py --model models/best.onnx
 ppe providers
 ppe bench --weights models/best.onnx
-ppe bench --weights models/best.int8.onnx --source baselines/snehilsanyal_yolov8n_css/source_files/construction-safety.jpg
+ppe bench --weights models/best.int8.onnx --source path/to/frame.jpg
 python scripts/benchmark.py --weights runs/train/e4_full44k/weights/best.pt
 
 # 8) Demo (second terminal for UI)

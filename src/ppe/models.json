@@ -11,7 +11,7 @@
       "precision": "fp32",
       "classes": ["vest", "no_vest"],
       "conf": 0.30,
-      "license": "AGPL-3.0",
+      "license": "AGPL-3.0-only",
       "description": "2-class hi-vis vest detector (YOLOv8n). Beta: see docs/MODEL_CARD.md."
     },
     "vest_specialist_int8": {
@@ -22,7 +22,7 @@
       "precision": "int8",
       "classes": ["vest", "no_vest"],
       "conf": 0.30,
-      "license": "AGPL-3.0",
+      "license": "AGPL-3.0-only",
       "description": "INT8 (static QDQ, float decode head) variant. Fastest on the Intel NPU."
     }
   }

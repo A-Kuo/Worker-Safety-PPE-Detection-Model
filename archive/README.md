@@ -8,7 +8,7 @@ Layout mirrors the repo root so a file can be restored with `git mv archive/<pat
 
 | Path | What it is |
 |---|---|
-| `baselines/snehilsanyal_yolov8n_css/` | Inherited third-party Construction YOLOv8n (10 classes), including its ONNX export. Not trained here — see `ATTRIBUTION.md`. |
+| `baselines/snehilsanyal_yolov8n_css/` | Notes, dataset yamls and the training log (`results.csv`) of the inherited third-party Construction YOLOv8n. Its weights, plots, sample photos and video were removed from the tree: third-party files with no stated licence (they remain in git history). Not trained here — see `ATTRIBUTION.md`. |
 | `docs/baseline.md`, `docs/baseline_hf.md` | Audits of the Construction and Hexmon baselines. |
 | `scripts/eval_baseline.py`, `eval_cross_domain.py` | Construction / Hard Hat Universe evaluation. |
 | `scripts/fetch_checkpoint.py`, `reorder_checkpoint_classes.py`, `verify_reorder.py` | Hexmon checkpoint fetch, class-order fix and verification. |
@@ -30,8 +30,6 @@ imports and shows `--help`.
   `EXPERIMENTS`: `vest_specialist` fine-tunes from the E0 checkpoint.
 - `app/` (Streamlit/FastAPI): replaced by the native NPU window in a later step.
 
-## Temporary dependencies on `archive/baselines`
-
-`scripts/smoke_edge.py` (run by CI) exports `archive/baselines/.../best.pt` and uses its sample image,
-and the runtime / app default-weight lookups list it as a last fallback. The NPU-only runtime step
-replaces these with a vest-specific model and removes the fallback.
+Nothing in `src/`, `app/`, `scripts/`, the tests or CI depends on `archive/baselines` any more.
+`archive/scripts/eval_baseline.py` and `archive/docs/baseline.md` describe the removed weights and need a
+local copy of them to run.

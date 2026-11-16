@@ -8,6 +8,20 @@ version = "0.1.0"
 description = "On-device PPE (hi-vis vest) detection: ONNX Runtime with a verifiable NPU-only mode"
 readme = "README.md"
 requires-python = ">=3.10"
+# AGPL-3.0-only: built on Ultralytics YOLOv8 (AGPL-3.0); the released weights are a derivative.
+license = { text = "AGPL-3.0-only" }
+keywords = ["ppe", "object-detection", "onnxruntime", "openvino", "npu", "edge"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
 # Runtime core is torch-free. An ONNX Runtime build is NOT listed here on purpose: plain
 # `onnxruntime` and `onnxruntime-openvino` share one import namespace and must not be installed
 # together, so pick exactly one of the `cpu` / `npu` extras.
@@ -53,3 +67,9 @@ ppe = ["models.json"]
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]
 testpaths = ["tests"]
+
+[project.urls]
+Source = "https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model"
+Documentation = "https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model/tree/main/docs"
+"Model card" = "https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model/blob/main/docs/MODEL_CARD.md"
+Issues = "https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model/issues"

@@ -1,0 +1,44 @@
+PPE vest detector
+Copyright (C) 2026 A-Kuo and contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+Affero General Public License as published by the Free Software Foundation, version 3.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General
+Public License (the LICENSE file) for more details.
+
+Source code: https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model
+
+It is a screening aid and not a safety system. Do not rely on it as the only control for personal
+protective equipment compliance.
+
+
+Third-party components
+======================
+
+Ultralytics YOLOv8 (https://github.com/ultralytics/ultralytics), AGPL-3.0.
+  Used for training and ONNX export (optional `train` extra). The released model weights
+  (vest_specialist.onnx, vest_specialist.int8.onnx) are derived from a YOLOv8n model and are therefore
+  distributed under AGPL-3.0; the ONNX files carry that licence in their metadata.
+
+ONNX Runtime (MIT), OpenVINO (Apache-2.0), OpenCV (Apache-2.0), NumPy (BSD-3-Clause),
+PyYAML (MIT), PySide6 / Qt for Python (LGPL-3.0), FastAPI (MIT), Streamlit (Apache-2.0).
+  Installed as dependencies; not redistributed in this repository.
+
+
+Training data
+=============
+
+Datasets from Roboflow Universe, used under Creative Commons Attribution 4.0 as stated by their
+publishers. No dataset images are redistributed in this repository. See ATTRIBUTION.md for the list,
+links, and one licence that has not been independently verified.
+
+
+Removed third-party files
+=========================
+
+Earlier revisions of this repository contained weights, plots, sample photographs and a video copied
+from snehilsanyal/Construction-Site-Safety-PPE-Detection. They had no stated licence and were removed
+from the current tree. They remain in the git history; they are not covered by this project's licence
+and no rights to them are granted here.

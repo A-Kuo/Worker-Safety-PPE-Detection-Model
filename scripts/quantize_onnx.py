@@ -80,7 +80,7 @@ def main() -> int:
             f"ONNX model not found: {model}\n"
             "Export first, e.g.\n"
             "  python scripts/export_onnx.py "
-            "--weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt "
+            "--weights runs/train/vest_specialist/weights/best.pt "
             "--out models/best.onnx"
         )
     out = _resolve_out(model, args.out)

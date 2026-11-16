@@ -1,256 +1,158 @@
-# Unified Multi-Domain PPE Compliance Detection
+# PPE vest detector
 
-YOLOv8-based personal protective equipment (PPE) detection with a **unified 14-class schema**, person–PPE compliance association, and a local FastAPI + Streamlit demo. Construction Site Safety is documented as a **third-party baseline**; Hard Hat Universe is held out for domain evaluation.
+On-device detection of hi-vis vests (`vest` / `no_vest`) with ONNX Runtime, built so that
+**"runs on the NPU" is something you can verify, not something you assume.**
 
-| | |
-|---|---|
-| **Train schema** | Combined PPE v4 → 14 unified classes (`helmet` / `no_helmet`, …) |
-| **Inherited baseline** | Construction YOLOv8n — mAP50 **0.809**, mAP50-95 **0.507** ([archive/docs/baseline.md](archive/docs/baseline.md)) |
-| **Demo** | [app/README.md](app/README.md) — FastAPI + Streamlit |
-| **Credits** | [ATTRIBUTION.md](ATTRIBUTION.md) |
+> **Beta (v0.1).** The model does not meet the project's 95% precision / recall target. Measured
+> numbers and their uncertainty are below and in the [model card](docs/MODEL_CARD.md). It is a
+> screening aid for a human reviewer, not a safety system.
 
----
+![Live window HUD on the Intel NPU](docs/assets/window_hud.png)
 
-## 1. Overview
+*`ppe window` on an Intel Core Ultra 7 256V, INT8 model, strict NPU mode, built-in synthetic source
+(self-test mode runs unpaced, hence the high FPS). The first HUD line is a measurement: node placement
+is profiled in the background.*
 
-This repo turns construction/industrial PPE detection into a reproducible portfolio pipeline:
+## What it does
 
-1. **Audit** an inherited Construction Site Safety YOLOv8n baseline (not claimed as our training).
-2. **Normalize** labels onto Combined PPE’s 14-class vocabulary.
-3. **Train / evaluate** via YAML configs and scripts (E0–E4 grid; metrics pending GPU + `ROBOFLOW_API_KEY`).
-4. **Calibrate** and cross-check domains; associate PPE boxes to `person` for compliance strings.
-5. **Ship** a local API + UI for image, video, and webcam review.
+- **Detects** worn and missing hi-vis vests per frame, from a camera, video or image.
+- **Proves placement.** ONNX Runtime silently runs unsupported operators (or a provider that failed to
+  load) on the CPU. `--strict-npu` forbids that, and `ppe verify-npu` profiles a run and reports which
+  provider executed every node.
+- **Measures itself.** Per-stage latency (preprocess / inference / decode), percentiles, and a
+  reproducibility fingerprint (runtime versions, NPU driver, model hash) in every result file.
+- **Installs without torch.** The runtime needs numpy, OpenCV and one ONNX Runtime build.
 
-Core library: [`src/ppe/`](src/ppe/) (`schema`, `compliance`, `inference`). Prefer `from ppe...` after `pip install -e .` (or with `src/` on `PYTHONPATH`); `src.ppe` remains a fallback in scripts/app.
+It does **not** tell you which worker is missing a vest: the model has no `person` class, so results
+are per frame (boxes and counts). See [Limitations](#limitations).
 
----
+## Quick start (Intel NPU, Windows)
 
-## 2. Motivation
-
-Missed PPE on site is a leading industrial safety failure mode. OSHA and similar regimes emphasize hard hats, high-visibility vests, eye/face protection, and related gear. Computer vision can flag **missing** equipment (`no_helmet`, `no_vest`, …) in camera feeds—similar in spirit to Matroid-style visual inspection—without replacing human judgment.
-
-**Detection bars for this cycle (not a single global accuracy):**
-
-| Priority | Class | Target |
-|---|---|---|
-| 1 | Hi-vis **vest** / `no_vest` | **95%+** precision and recall |
-| 2 | **Hard hat** / `no_helmet` | Next; stretch high 80s–90s |
-| 3 | **Goggles** | **~70% acceptable** (clear lenses vs everyday glasses) |
-| Later | Steel-toe boots | Future dataset only — Combined has no boot class |
-
-This project also uses a **shared label schema**, **recall-first** thresholds on `no_*` (especially missing vests), and an honest split between inherited artifacts and original engineering.
-
----
-
-## 3. Data
-
-| Dataset | Role | Notes |
-|---|---|---|
-| [Construction Site Safety v28](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety/dataset/28) | Inherited baseline train/eval | 10 classes; split **2605 / 114 / 82**; val n=114 is too small for strong per-class claims |
-| [Personal Protective Equipment Combined Model v4](https://universe.roboflow.com/roboflow-universe-projects/personal-protective-equipment-combined-model/dataset/4) | **Unified train set** | ~44k images, 14 classes, 70/20/10 |
-| [Hard Hat Universe](https://universe.roboflow.com/universe-datasets/hard-hat-universe-0dy7t) | **Held-out** helmet-domain eval | ~7k; not mixed into training |
-
-**Licenses:** Roboflow Universe sets used here are **CC BY 4.0** — see [ATTRIBUTION.md](ATTRIBUTION.md).
-
-**Label normalization** (Combined → unified):
-
-| Combined raw | Unified |
-|---|---|
-| Hardhat / NO-Hardhat | `helmet` / `no_helmet` |
-| Safety Vest / NO-Safety Vest | `vest` / `no_vest` |
-| Goggles / NO-Goggles | `goggles` / `no_goggles` |
-| Gloves / NO-Gloves | `gloves` / `no_gloves` |
-| Mask / NO-Mask | `mask` / `no_mask` |
-| Person / Safety Cone | `person` / `cone` |
-| Ladder / Fall-Detected | `ladder` / `fall_detected` |
-
-<img width="1024" height="683" alt="construction-safety" src="https://github.com/user-attachments/assets/5093d0f1-534b-4937-bc49-9a87c8a6630f" />
-
-
-Construction-only `machinery` / `vehicle` stay on the Construction baseline; they are **not** in the unified model. **Boots are future work** (Combined has no `boots` / `no_boots`); do not invent the class this cycle.
-
-**No Construction ↔ Combined merge.** Construction already clones imagery from Combined and other Universe sets; merging without perceptual hashing would leak train/eval. Protocol: remap separately; evaluate Construction on mapped shared classes only.
-
-Configs: [`configs/data/`](configs/data/). Compute notes: [`docs/compute.md`](docs/compute.md).
-
----
-
-## 4. Model Architecture
-
-- **Baseline / primary detector:** Ultralytics **YOLOv8n** (nano) — Construction inherited weights under [`archive/baselines/snehilsanyal_yolov8n_css/`](archive/baselines/snehilsanyal_yolov8n_css/); unified runs use the same family.
-- **Variants in the experiment grid:** YOLOv8**s** (E1); optional **m** only if E1 and E4 finish early.
-- **Compliance layer:** `src/ppe/compliance.py` associates PPE boxes to `person` via containment / IoU and emits strings like `Worker k — missing helmet, vest`.
-- **Optional VLM:** not implemented this cycle (see §8).
-
-**Fine-tuning base checkpoint:** [Hexmon/vyra-yolo-ppe-detection](https://huggingface.co/Hexmon/vyra-yolo-ppe-detection) (YOLOv8m on Combined v4, CC BY 4.0) was vetted and adopted as the base for gap fine-tuning on vest/no_vest reliability — see `ATTRIBUTION.md`, `archive/configs/models/registry.yaml`, and `archive/docs/baseline_hf.md` for its raw (pre-fine-tune) numbers. Fetched and pinned via `archive/scripts/fetch_checkpoint.py`; its class order was then corrected to match this repo's unified schema via `archive/scripts/reorder_checkpoint_classes.py` (verified via `archive/scripts/verify_reorder.py`) — use `models/pretrained/hexmon_vyra/best_unified_order.pt`, not the raw fetch.
-
----
-
-## 5. Training & Experiments
-
-Scripts and YAML drive training; nothing is claimed as a finished Combined run until GPU jobs complete with downloaded data.
-
-| | |
-|---|---|
-| Configs | [`configs/train/`](configs/train/) — `e0_n`, `e1_s`, `e2_focal`, `e3_augs`, `e4_full44k` |
-| Entry point | `python scripts/train.py --exp e0_n` |
-| Protocol | [`docs/experiments.md`](docs/experiments.md) |
-
-**Grid (one factor at a time, fixed seed / split):**
-
-| ID | Change | Data |
-|---|---|---|
-| E0 | YOLOv8n default | Stratified Combined **12k** subset |
-| E1 | YOLOv8s | Same subset |
-| E2 | `fl_gamma=1.5` (focal) | Same subset |
-| E3 | Stronger augs (blur, brightness, crop) | Same subset |
-| E4 | YOLOv8n **50e** on full **44k** | Confirmation / shipped detector |
-
-**Where to train:** **Colab or Kaggle** for E0–E4. Local **8GB** GPU is for baseline val, export, demo, and optional `--batch 8` smokes only. See [`docs/compute.md`](docs/compute.md) and [`notebooks/train_colab_kaggle.ipynb`](notebooks/train_colab_kaggle.ipynb).
-
-**Metrics pending** until Combined downloads finish and a Colab/Kaggle job completes. Do not compare Combined 14-class mAP to Construction 10-class mAP as a like-for-like win; use `SHARED_EVAL_CLASSES` for fair slices. Lead reporting with **vest / no_vest**.
-
----
-
-## 6. Evaluation & Mathematical Analysis
-
-### Inherited Construction baseline (documented, not our train)
-
-From [`archive/docs/baseline.md`](archive/docs/baseline.md) / inherited `results.csv` (epoch 99):
-
-| Metric | Value |
-|---|---|
-| mAP@0.50 | **0.809** |
-| mAP@0.50:0.95 | **0.507** |
-| Precision | **0.900** |
-| Recall | **0.731** |
-
-Per-class Ultralytics val needs Construction images on disk (`python archive/scripts/eval_baseline.py`). Confusion-matrix takeaways (inherited plot): `NO-*` classes leak into background — motivation for recall-first threshold sweeps.
-
-### Scripts for rigor (after Combined weights exist)
-
-| Script | Purpose |
-|---|---|
-| `scripts/eval.py` | In-domain Combined eval |
-| `archive/scripts/eval_cross_domain.py` | Combined / Construction (mapped) / HHU tables |
-| `scripts/calibrate.py` | ECE, Brier, `no_*` confidence sweeps (target R ≥ 0.90) |
-| `scripts/validate_accuracy.py` | Offline product-bar gate on recorded `results/analysis/eval_*.json` (vest/helmet/goggles) |
-| `scripts/benchmark.py` + `export_onnx.py` / `quantize_onnx.py` | Latency / FPS; ONNX + INT8 edge path |
-| `ppe` CLI (`providers` / `export` / `quantize` / `bench` / `predict`) | Vendor-agnostic ORT EP registry — [docs/edge_npu.md](docs/edge_npu.md) |
-
----
-
-## 7. Deployment
-
-Local-only demo (loopback by default) — see **[app/README.md](app/README.md)** for weights env vars and endpoints. Camera path is NPU-first with timely frame draining; Edge / NPU (ONNX-first): **[docs/edge_npu.md](docs/edge_npu.md)**.
-
-```bash
-# From repo root
-python -m pip install -r requirements.txt
-python -m pip install -r app/requirements.txt
-# Optional editable install for `from ppe...` and the `ppe` CLI:
-python -m pip install -e ".[edge]"
-
-# API
-uvicorn app.api.main:app --reload --host 127.0.0.1 --port 8000
-# or: python -m app.api.main
-
-# UI (second terminal)
-streamlit run app/ui/streamlit_app.py
+```powershell
+python -m venv .venv; .venv\Scripts\Activate.ps1
+python -m pip install "ppe[npu,gui] @ git+https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model@v0.1.0"
+ppe fetch-model                       # verified download of the vest model
+ppe verify-npu --providers openvino   # exit 0 only if every node ran on the NPU
+ppe window --strict-npu --providers openvino
 ```
 
-OpenAPI: http://127.0.0.1:8000/docs — `POST /predict/image`, `POST /predict/video`, `GET /stream` (MJPEG).
+From a checkout, replace the install line with `python -m pip install -e ".[npu,gui]"`.
 
-Default weights: `PPE_WEIGHTS`, else first existing of `archive/baselines/snehilsanyal_yolov8n_css/models/best.pt` or `models/best.pt`.
+No NPU? Use the CPU build: `pip install "ppe[cpu,gui] @ git+…"`, then `ppe fetch-model` and
+`ppe window`. No camera? `ppe window --source clip.mp4`, an image path, or `--source synthetic`.
 
----
+### Install options
 
-## 8. Optional VLM Layer (future)
+Pick **exactly one** runtime; the two share the `onnxruntime` import and must not be installed together.
 
-Not implemented. A later stretch would freeze **OpenCLIP** (or similar) over a labeled frame bank for retrieval (“frames with missing vests”) — Matroid-shaped multimodal search without claiming captioning SOTA. Prefer retrieval over generative theater until the detector path is solid.
+| Extra | Installs | For |
+|---|---|---|
+| `cpu` | `onnxruntime` | Any machine |
+| `npu` | `onnxruntime-openvino` + `openvino` | Intel NPU / iGPU (Lunar Lake and similar) |
+| `gui` | PySide6 | The live window |
+| `quant` | `onnx`, `onnxconverter-common` | `ppe quantize` |
+| `train` | torch, ultralytics, roboflow | Training, evaluation scripts, `ppe export` |
+| `app` | FastAPI, Streamlit | The older browser demo under `app/` |
+| `dev` | pytest, onnx, build, twine | Tests and packaging |
 
----
+Python 3.10 – 3.12.
 
-## 9. Future Work
+## Commands
 
-- **Steel-toe boots / `no_boots`** — needs a separate labeled set; not in Combined
-- Multi-object **tracking** (ByteTrack / BoT-SORT) for stable worker IDs across frames
-- **SCADA / MES** hooks for plant alarms and shift dashboards
-- **IR / thermal** cameras for low-light and outdoor night shifts
-- Optional YOLOv8m (E5); re-check INT8 accuracy on real NPU hardware after E4
-
----
-
-## 10. What I inherited vs what I built
-
-| Inherited / adopted (third-party) | Built in this repo |
+| Command | What it does |
 |---|---|
-| Snehil Sanyal Construction YOLOv8n weights, plots, `results.csv`, sample media | `src/ppe/` schema, compliance, inference |
-| Original Roboflow Construction notes / yaml layout | `scripts/` download → remap → subset → analyze → train → eval → calibrate → export → benchmark |
-| Artifact dump moved under `archive/baselines/snehilsanyal_yolov8n_css/` | `configs/data`, `configs/train`, docs, tests |
-| Hexmon/vyra-yolo-ppe-detection checkpoint (fetched, pinned, not fine-tuned as-is) | Checkpoint fetch/provenance tooling (`archive/scripts/fetch_checkpoint.py`, `archive/configs/models/registry.yaml`, `archive/models/pretrained/manifest.json`), class-order correction (`archive/scripts/reorder_checkpoint_classes.py`, `archive/scripts/verify_reorder.py`) |
-| novest/no-vest-detect v1 (Roboflow Universe, gap-fill vest/no_vest data) | Gap fine-tuning pipeline (`archive/scripts/finetune.py`, `archive/configs/finetune/`) and the raw-vs-fine-tuned-vs-from-scratch comparison analysis |
-| | FastAPI + Streamlit demo under `app/` |
-| | Edge runtime (`src/ppe/runtime/`), `ppe` CLI, ONNX INT8 quantize, Intel NPU/OpenVINO device targeting |
-| | Honest attribution and portfolio README |
+| `ppe fetch-model [--list]` | Download a released model; installed only if size and SHA-256 match |
+| `ppe verify-npu` | Profile a run and report the provider of every node (`--soft` lists CPU-resident ops) |
+| `ppe window` | Live window with HUD. Space pause, R record, +/- threshold, A about, Q quit |
+| `ppe predict --source img.jpg` | One image: boxes, per-class counts |
+| `ppe bench` | Latency percentiles and stage breakdown, with fingerprint |
+| `ppe eval --images dir` | Accuracy on a labeled folder: box counts, AP50, Wilson intervals |
+| `ppe quantize` / `ppe export` | Build INT8 / ONNX models (`quant` / `train` extras) |
+| `ppe providers` | Execution providers available on this machine |
 
-**Do not** present `archive/baselines/.../models/best.pt` as a model trained here.
+Useful flags: `--strict-npu` (no CPU provider, no CPU fallback, static shapes, device pinned to the
+NPU), `--providers openvino`, `--openvino-device NPU|GPU|CPU`, `--conf`. Details:
+[docs/edge_npu.md](docs/edge_npu.md).
 
-### Citations
+## Accuracy
 
-- **Snehil Sanyal** — [Construction-Site-Safety-PPE-Detection](https://github.com/snehilsanyal/Construction-Site-Safety-PPE-Detection)
-- **Roboflow Universe** datasets above — **CC BY 4.0**
-- **Hexmon/vyra-yolo-ppe-detection** — adopted fine-tuning base checkpoint (Combined v4, CC BY 4.0)
+The shipped FP32 ONNX, scored through this package's runtime on the NPU in strict mode. Test set: 145
+images deduplicated against the training data, **249 `vest` boxes and 43 `no_vest` boxes**. Confidence
+0.30, Wilson 95% intervals.
 
-Full license table: [ATTRIBUTION.md](ATTRIBUTION.md).
+| Class | Boxes | AP50 | Precision (95% CI) | Recall (95% CI) |
+|---|---|---|---|---|
+| vest | 249 | 0.916 | 0.897 (0.853 – 0.930) | 0.879 (0.833 – 0.914) |
+| no_vest | 43 | 0.711 | 0.648 (0.515 – 0.762) | 0.814 (0.674 – 0.903) |
 
----
+- **The 95% target is not met**, and the intervals lie entirely below it, so this is not sampling noise.
+- **43 `no_vest` boxes is a small sample.** The recall interval is 23 points wide.
+- `no_vest` precision of about 0.65 means roughly one false alarm in three at this threshold.
 
-## Repo map
+Full tables, the operating-point trade-off, and how the numbers tie back to the training run are in
+the [model card](docs/MODEL_CARD.md). Every number there is regenerated from committed result files by
+`scripts/summarize_evidence.py`.
+
+## Latency
+
+Intel Core Ultra 7 256V (NPU "Intel AI Boost", Arc 140V iGPU), `onnxruntime-openvino` 1.24.1, OpenVINO
+2025.4.1. End to end per frame (preprocess + inference + decode), 300 iterations, min – max over runs.
+
+| Model | Device | p50 ms | p95 ms |
+|---|---|---|---|
+| INT8 | NPU, strict | 4.25 – 4.31 | 5.55 – 5.68 |
+| FP32 | iGPU | 5.09 – 5.47 | 6.14 – 6.45 |
+| FP32 | NPU, strict | 6.23 – 6.41 | 7.41 – 9.04 |
+| FP32 | CPU (OpenVINO) | 26.4 | 31.1 |
+
+INT8 on the NPU is the fastest configuration measured; in FP32 the iGPU is faster than the NPU. One
+non-isolated machine: tail latency varied between runs and is not a guarantee. Power draw was not
+measured, so no efficiency claim is made.
+
+## Limitations
+
+- Beta accuracy, as above. Real-footage and cross-site evaluation have not been done.
+- Frame-level only. Attaching vest status to individual workers needs a person detector (roadmap).
+- Vests only. No helmets, goggles, gloves or boots in the shipped model.
+- Verified on one Intel Lunar Lake machine. Other NPUs (Qualcomm QNN, Apple Core ML) are wired into
+  the provider registry but untested.
+- The training data is construction-site imagery with partial labels; expect weaker results elsewhere.
+
+## Repository layout
 
 ```text
-src/ppe/           # schema, compliance, inference, runtime (ORT EPs), cli
-scripts/           # pipeline CLIs (+ run_pipeline.md)
-configs/data/      # combined
-configs/train/     # E0–E4 experiment YAMLs
-app/               # FastAPI + Streamlit
-docs/              # experiments, compute, edge_npu
-models/            # exported ONNX / INT8 (binaries gitignored)
-archive/           # inherited baselines, Hexmon/gap tooling, legacy docs (see archive/README.md)
-tests/             # schema, compliance, runtime unit tests
+src/ppe/            runtime, CLI, live window, evaluation, model registry
+scripts/            training / data pipeline (called by the Kaggle notebook), smoke and release checks
+tests/              unit and integration tests (no dataset or NPU needed)
+docs/               model card, NPU guide, experiments log, releasing
+configs/            dataset and training configs
+results/            committed evidence: accuracy, placement and latency JSON
+notebooks/          Kaggle / Colab training notebook
+app/                older FastAPI + Streamlit demo (source checkout only)
+archive/            superseded tooling and notes kept for provenance
 ```
 
-### End-to-end command sequence
-
-See also [`scripts/run_pipeline.md`](scripts/run_pipeline.md).
+## Development
 
 ```bash
-# Requires ROBOFLOW_API_KEY for downloads; GPU recommended for train/eval
-python scripts/download_datasets.py --execute
-python scripts/remap_labels.py --source data/raw/combined --out data/processed/combined --mapping combined
-python scripts/remap_labels.py --source data/raw/hardhat --out data/processed/hardhat --mapping hhu
-python scripts/remap_labels.py --source data/raw/construction --out data/processed/construction --mapping construction
-python scripts/make_subset.py --source data/raw/combined --out data/raw/combined_12k --n 12000 --seed 42
-python scripts/analyze_distribution.py
-python scripts/train.py --exp e0_n
-python scripts/eval.py --weights runs/train/e0_n/weights/best.pt
-python scripts/calibrate.py --weights runs/train/e0_n/weights/best.pt
-python scripts/validate_accuracy.py   # product bars vs results/analysis/eval_*.json
-# Edge path until Combined E4 exists — use inherited Construction weights:
-python scripts/export_onnx.py --weights archive/baselines/snehilsanyal_yolov8n_css/models/best.pt --out models/best.onnx
-python scripts/quantize_onnx.py --model models/best.onnx
-# Class-pair specialists (vest / helmet) export to ONNX and attach on NPU via PPE_SPECIALISTS:
-# ppe export --weights runs/train/vest_specialist/weights/best.pt --out models/vest_specialist.onnx
-ppe providers
-ppe bench --weights models/best.onnx
-# Then launch app/ (see §7)
+python -m pip install -e ".[cpu,dev]"
+python -m pytest -q
+python scripts/smoke_edge.py --require-npu     # generated model, no torch, no weights
+python -m build && python scripts/wheel_smoke.py
 ```
 
-### Quick checks
+CI runs the torch-free path on Ubuntu (Python 3.10 – 3.12) and Windows, including installing the built
+wheel in a fresh environment. Training and the data pipeline are described in
+[docs/experiments.md](docs/experiments.md) and [scripts/run_pipeline.md](scripts/run_pipeline.md);
+releases in [docs/RELEASING.md](docs/RELEASING.md). See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-```bash
-python -c "from ppe.schema import UNIFIED_CLASS_NAMES; print(len(UNIFIED_CLASS_NAMES))"  # → 14
-pytest tests/
-python -m ppe.cli providers
-python scripts/smoke_edge.py --require-npu   # ONNX-first edge path + hard NPU gate
-```
+## Licence
+
+Code and model weights: **GNU Affero General Public License v3.0 only** ([LICENSE](LICENSE)). The
+detector is built with [Ultralytics](https://github.com/ultralytics/ultralytics) YOLOv8 (AGPL-3.0) and
+the weights are a derivative of it. If you run a modified version as a network service you must offer
+its source to the users of that service; the API, the web demo and the window's About dialog link to
+the source for that reason.
+
+Training data is from Roboflow Universe under CC BY 4.0. Credits and third-party notices:
+[ATTRIBUTION.md](ATTRIBUTION.md), [NOTICE](NOTICE).
