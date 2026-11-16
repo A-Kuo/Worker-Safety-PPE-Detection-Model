@@ -229,7 +229,10 @@ def test_scrub_paths_handles_repo_home_and_leaves_lookalikes(tmp_path):
     out = scrub_paths(data, tmp_path)
     assert out["in_repo"] == "<repo>/models/m.onnx" and out["repo_itself"] == "<repo>"
     assert out["in_home"] == "~/.ppe/models/m.onnx"
-    assert out["lookalike"] == data["lookalike"] and out["plain"] == "CPUExecutionProvider" and out["n"] == 3
+    # Not the repo, so never "<repo>". (On Windows the temp dir is under the home folder, so the
+    # same string is legitimately shortened to "~/..."; elsewhere it is left alone.)
+    assert not out["lookalike"].startswith("<repo>") and out["lookalike"].endswith("-other/x")
+    assert out["plain"] == "CPUExecutionProvider" and out["n"] == 3
 
 
 def test_committed_vest_evidence_is_consistent_and_path_free():

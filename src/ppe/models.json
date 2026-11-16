@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "release": "v0.1.0",
+  "default": "vest_specialist",
+  "models": {
+    "vest_specialist": {
+      "file": "vest_specialist.onnx",
+      "url": "https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model/releases/download/v0.1.0/vest_specialist.onnx",
+      "sha256": "b641539a7c56036382e9418b3df7a3b3f107f62f2059b65f4d8356e77e1c96b4",
+      "bytes": 12239302,
+      "precision": "fp32",
+      "classes": ["vest", "no_vest"],
+      "conf": 0.30,
+      "license": "AGPL-3.0",
+      "description": "2-class hi-vis vest detector (YOLOv8n). Beta: see docs/MODEL_CARD.md."
+    },
+    "vest_specialist_int8": {
+      "file": "vest_specialist.int8.onnx",
+      "url": "https://github.com/A-Kuo/Worker-Safety-PPE-Detection-Model/releases/download/v0.1.0/vest_specialist.int8.onnx",
+      "sha256": "ebffbee7b9bb662a620a2fd935d2726a5d7a2f4d4f8ffdaf4fa6916735db2004",
+      "bytes": 3498888,
+      "precision": "int8",
+      "classes": ["vest", "no_vest"],
+      "conf": 0.30,
+      "license": "AGPL-3.0",
+      "description": "INT8 (static QDQ, float decode head) variant. Fastest on the Intel NPU."
+    }
+  }
+}

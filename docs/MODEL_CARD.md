@@ -16,6 +16,16 @@ the model's SHA-256. If a number here and a JSON disagree, the JSON is right.
 Both: input `images` `[1, 3, 640, 640]` float32 RGB 0..1 (static), output `[1, 6, 8400]`, opset 17,
 class names embedded in the ONNX metadata. Weights are distributed as release assets, not in git.
 
+```
+ppe fetch-model                       # FP32, into ~/.ppe/models (or PPE_MODEL_DIR)
+ppe fetch-model vest_specialist_int8  # the INT8 variant
+ppe fetch-model --list
+```
+
+`ppe fetch-model` accepts a download only if its size and SHA-256 match the values above, which are
+packaged with the code (`src/ppe/models.json`); anything else is rejected and not installed. Commands
+run without `--weights` then find the FP32 model automatically and use its recommended confidence.
+
 ## Intended use
 
 - Frame-level detection of worn and missing hi-vis vests in construction / industrial imagery, on
@@ -68,8 +78,9 @@ What this does and does not show:
 
 **Operating point.** Use confidence **0.30** as the default. For missed-vest screening where recall
 matters more than false alarms, lower only that class: `PPE_CLASS_CONF="no_vest=0.15"` raises `no_vest`
-recall from 0.81 to 0.86 at the cost of about 6 more false boxes per 100 images. The package default is
-still 0.25; a packaged per-model default arrives with the model fetcher.
+recall from 0.81 to 0.86 at the cost of about 6 more false boxes per 100 images. For the released
+models (recognised by hash) the CLI uses 0.30 automatically unless `--conf` or `PPE_CONF` is set; other
+models keep the package default of 0.25.
 
 **Provenance** (`results/analysis/eval_vest_ultralytics_crosscheck.json`, Ultralytics validator, NMS
 IoU 0.7, same 145 images): the Kaggle checkpoint reproduces locally (vest AP50 0.919, no_vest 0.756);

@@ -116,11 +116,26 @@ def prepare_ort_environment() -> None:
     if _ENV_PREPARED:
         return
     _ENV_PREPARED = True
-    try:
-        from onnxruntime.tools.add_openvino_win_libs import add_openvino_libs_to_path
+    import sys
 
-        add_openvino_libs_to_path()
-    except Exception:  # noqa: BLE001 - optional: not Windows, or not the OpenVINO build
+    if sys.platform != "win32":
+        return
+    try:
+        # Load the one helper file directly. `import onnxruntime.tools...` would run the package's
+        # __init__, which imports torch whenever torch is installed: every session open then paid
+        # for a torch import, on a runtime that is meant to be torch-free.
+        import importlib.util
+        from pathlib import Path
+
+        spec_ort = importlib.util.find_spec("onnxruntime")
+        helper = Path(spec_ort.origin).parent / "tools" / "add_openvino_win_libs.py"
+        if not helper.is_file():
+            return
+        spec = importlib.util.spec_from_file_location("_ppe_ort_openvino_win_libs", helper)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.add_openvino_libs_to_path()
+    except Exception:  # noqa: BLE001 - optional: not the OpenVINO build, or the helper moved
         pass
 
 

@@ -19,7 +19,7 @@ Default runtime is **ONNX Runtime** with a vendor-agnostic execution-provider re
 | Soft (default) | `PPE_NPU_ONLY=1` | Prefer NPU EPs; skip CUDA/TensorRT; **CPU still allowed** as fallback |
 | Hard | `PPE_NPU_ONLY=1` **and** `PPE_ALLOW_CPU_FALLBACK=0` | Must resolve a real NPU EP (`openvino` / `qnn` / …) or **raise** before the session opens — no silent CPU |
 
-CI runs `python scripts/smoke_edge.py --require-npu`: on CPU-only runners that proves the hard gate refuses; on a Lunar Lake box with `onnxruntime-openvino` it exercises the OpenVINO EP.
+CI runs `python scripts/smoke_edge.py --require-npu` with a generated few-kilobyte detector (no torch, no third-party weights): on CPU-only runners that proves the hard gate refuses and that preprocessing, decode and NMS return exact expected boxes; on a Lunar Lake box with `onnxruntime-openvino` the same flag requires the NPU provider to resolve. CI then builds the wheel and uses it from a fresh virtualenv outside the repository (`scripts/wheel_smoke.py`), on Ubuntu and Windows.
 
 ### Strict NPU mode (`PPE_STRICT_NPU=1` / `--strict-npu`)
 
@@ -157,6 +157,16 @@ ppe predict --weights models/best.onnx --source archive/baselines/snehilsanyal_y
 Accuracy with confidence intervals, the INT8 result and the latency table for the shipped vest model are in [`MODEL_CARD.md`](MODEL_CARD.md). Short version, same Lunar Lake machine: INT8 on the NPU in strict mode is the fastest configuration measured (p50 4.25-4.31 ms end to end over three runs); FP32 runs at 6.2-6.4 ms on the NPU and 5.1-5.5 ms on the iGPU. Score any model on your own labeled images with `ppe eval --weights <model.onnx> --images <dir>`.
 
 **INT8 must keep the decode head in float** (`ppe quantize --static --qdq --per-channel --float-head --calibration <dir> --seed 0`). A fully quantized YOLO head scored AP50 0.0 on the CPU while the same file still worked on the NPU, so always evaluate a quantized model on every device you ship to. Dynamic INT8 (`ppe quantize` with no flags) is not recommended for this model.
+
+## Getting the model
+
+```powershell
+python -m pip install ".[npu]"      # or ".[cpu]"; never both
+ppe fetch-model                     # verified download into ~/.ppe/models
+ppe verify-npu --providers openvino # proves every node runs on the NPU
+```
+
+`ppe fetch-model --list` shows the registered files and hashes; `--dest`, `--url` (mirror or local file, hash still enforced) and `--force` are available. See [`MODEL_CARD.md`](MODEL_CARD.md).
 
 ## Live window (`ppe window`)
 
