@@ -1,0 +1,417 @@
+{
+  "model": "<repo>/models/vest_specialist.int8.onnx",
+  "images_dir": "<repo>/data/processed/vest_specialist/test/images",
+  "label_names": [
+    "vest",
+    "no_vest"
+  ],
+  "tag": "int8_igpu",
+  "protocol": {
+    "path": "ppe runtime (ORT decode + class-agnostic NMS IoU 0.45)",
+    "conf_floor": 0.001,
+    "match_iou": 0.5,
+    "ap": "AP50, 101-point interpolation",
+    "intervals": "Wilson 95%"
+  },
+  "n_images": 145,
+  "map50": 0.8133,
+  "per_class": {
+    "vest": {
+      "n_gt_boxes": 249,
+      "n_detections": 1564,
+      "ap50": 0.9083,
+      "sweep": [
+        {
+          "conf": 0.05,
+          "tp": 226,
+          "fp": 101,
+          "fn": 23,
+          "precision": 0.6911,
+          "recall": 0.9076,
+          "precision_ci95": [
+            0.6391,
+            0.7387
+          ],
+          "recall_ci95": [
+            0.8652,
+            0.9377
+          ],
+          "fp_per_100_images": 69.66
+        },
+        {
+          "conf": 0.1,
+          "tp": 225,
+          "fp": 63,
+          "fn": 24,
+          "precision": 0.7812,
+          "recall": 0.9036,
+          "precision_ci95": [
+            0.73,
+            0.8251
+          ],
+          "recall_ci95": [
+            0.8606,
+            0.9344
+          ],
+          "fp_per_100_images": 43.45
+        },
+        {
+          "conf": 0.15,
+          "tp": 223,
+          "fp": 49,
+          "fn": 26,
+          "precision": 0.8199,
+          "recall": 0.8956,
+          "precision_ci95": [
+            0.7698,
+            0.861
+          ],
+          "recall_ci95": [
+            0.8514,
+            0.9277
+          ],
+          "fp_per_100_images": 33.79
+        },
+        {
+          "conf": 0.2,
+          "tp": 222,
+          "fp": 38,
+          "fn": 27,
+          "precision": 0.8538,
+          "recall": 0.8916,
+          "precision_ci95": [
+            0.8058,
+            0.8916
+          ],
+          "recall_ci95": [
+            0.8468,
+            0.9244
+          ],
+          "fp_per_100_images": 26.21
+        },
+        {
+          "conf": 0.25,
+          "tp": 221,
+          "fp": 32,
+          "fn": 28,
+          "precision": 0.8735,
+          "recall": 0.8876,
+          "precision_ci95": [
+            0.8269,
+            0.909
+          ],
+          "recall_ci95": [
+            0.8423,
+            0.921
+          ],
+          "fp_per_100_images": 22.07
+        },
+        {
+          "conf": 0.3,
+          "tp": 218,
+          "fp": 25,
+          "fn": 31,
+          "precision": 0.8971,
+          "recall": 0.8755,
+          "precision_ci95": [
+            0.8525,
+            0.9293
+          ],
+          "recall_ci95": [
+            0.8287,
+            0.9109
+          ],
+          "fp_per_100_images": 17.24
+        },
+        {
+          "conf": 0.4,
+          "tp": 211,
+          "fp": 19,
+          "fn": 38,
+          "precision": 0.9174,
+          "recall": 0.8474,
+          "precision_ci95": [
+            0.8746,
+            0.9465
+          ],
+          "recall_ci95": [
+            0.7975,
+            0.8868
+          ],
+          "fp_per_100_images": 13.1
+        },
+        {
+          "conf": 0.5,
+          "tp": 205,
+          "fp": 15,
+          "fn": 44,
+          "precision": 0.9318,
+          "recall": 0.8233,
+          "precision_ci95": [
+            0.8906,
+            0.9582
+          ],
+          "recall_ci95": [
+            0.7711,
+            0.8657
+          ],
+          "fp_per_100_images": 10.34
+        },
+        {
+          "conf": 0.6,
+          "tp": 196,
+          "fp": 11,
+          "fn": 53,
+          "precision": 0.9469,
+          "recall": 0.7871,
+          "precision_ci95": [
+            0.9074,
+            0.9701
+          ],
+          "recall_ci95": [
+            0.7321,
+            0.8334
+          ],
+          "fp_per_100_images": 7.59
+        },
+        {
+          "conf": 0.7,
+          "tp": 181,
+          "fp": 5,
+          "fn": 68,
+          "precision": 0.9731,
+          "recall": 0.7269,
+          "precision_ci95": [
+            0.9386,
+            0.9885
+          ],
+          "recall_ci95": [
+            0.6684,
+            0.7785
+          ],
+          "fp_per_100_images": 3.45
+        }
+      ]
+    },
+    "no_vest": {
+      "n_gt_boxes": 43,
+      "n_detections": 655,
+      "ap50": 0.7182,
+      "sweep": [
+        {
+          "conf": 0.05,
+          "tp": 37,
+          "fp": 56,
+          "fn": 6,
+          "precision": 0.3978,
+          "recall": 0.8605,
+          "precision_ci95": [
+            0.3043,
+            0.4995
+          ],
+          "recall_ci95": [
+            0.7274,
+            0.9344
+          ],
+          "fp_per_100_images": 38.62
+        },
+        {
+          "conf": 0.1,
+          "tp": 36,
+          "fp": 39,
+          "fn": 7,
+          "precision": 0.48,
+          "recall": 0.8372,
+          "precision_ci95": [
+            0.3707,
+            0.5913
+          ],
+          "recall_ci95": [
+            0.7003,
+            0.9188
+          ],
+          "fp_per_100_images": 26.9
+        },
+        {
+          "conf": 0.15,
+          "tp": 36,
+          "fp": 29,
+          "fn": 7,
+          "precision": 0.5538,
+          "recall": 0.8372,
+          "precision_ci95": [
+            0.4334,
+            0.6683
+          ],
+          "recall_ci95": [
+            0.7003,
+            0.9188
+          ],
+          "fp_per_100_images": 20.0
+        },
+        {
+          "conf": 0.2,
+          "tp": 36,
+          "fp": 24,
+          "fn": 7,
+          "precision": 0.6,
+          "recall": 0.8372,
+          "precision_ci95": [
+            0.4737,
+            0.7143
+          ],
+          "recall_ci95": [
+            0.7003,
+            0.9188
+          ],
+          "fp_per_100_images": 16.55
+        },
+        {
+          "conf": 0.25,
+          "tp": 35,
+          "fp": 20,
+          "fn": 8,
+          "precision": 0.6364,
+          "recall": 0.814,
+          "precision_ci95": [
+            0.5042,
+            0.7507
+          ],
+          "recall_ci95": [
+            0.6738,
+            0.9026
+          ],
+          "fp_per_100_images": 13.79
+        },
+        {
+          "conf": 0.3,
+          "tp": 33,
+          "fp": 17,
+          "fn": 10,
+          "precision": 0.66,
+          "recall": 0.7674,
+          "precision_ci95": [
+            0.5215,
+            0.7756
+          ],
+          "recall_ci95": [
+            0.6226,
+            0.8685
+          ],
+          "fp_per_100_images": 11.72
+        },
+        {
+          "conf": 0.4,
+          "tp": 31,
+          "fp": 14,
+          "fn": 12,
+          "precision": 0.6889,
+          "recall": 0.7209,
+          "precision_ci95": [
+            0.5433,
+            0.8047
+          ],
+          "recall_ci95": [
+            0.5731,
+            0.8325
+          ],
+          "fp_per_100_images": 9.66
+        },
+        {
+          "conf": 0.5,
+          "tp": 31,
+          "fp": 11,
+          "fn": 12,
+          "precision": 0.7381,
+          "recall": 0.7209,
+          "precision_ci95": [
+            0.5893,
+            0.847
+          ],
+          "recall_ci95": [
+            0.5731,
+            0.8325
+          ],
+          "fp_per_100_images": 7.59
+        },
+        {
+          "conf": 0.6,
+          "tp": 26,
+          "fp": 8,
+          "fn": 17,
+          "precision": 0.7647,
+          "recall": 0.6047,
+          "precision_ci95": [
+            0.6,
+            0.8756
+          ],
+          "recall_ci95": [
+            0.4558,
+            0.7363
+          ],
+          "fp_per_100_images": 5.52
+        },
+        {
+          "conf": 0.7,
+          "tp": 21,
+          "fp": 3,
+          "fn": 22,
+          "precision": 0.875,
+          "recall": 0.4884,
+          "precision_ci95": [
+            0.69,
+            0.9566
+          ],
+          "recall_ci95": [
+            0.3462,
+            0.6325
+          ],
+          "fp_per_100_images": 2.07
+        }
+      ]
+    }
+  },
+  "unreadable_images": 0,
+  "strict_npu": false,
+  "providers_active": [
+    "OpenVINOExecutionProvider",
+    "CPUExecutionProvider"
+  ],
+  "openvino_device_type": "GPU",
+  "fingerprint": {
+    "python": "3.12.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "onnxruntime": {
+      "distribution": "onnxruntime-openvino",
+      "version": "1.24.1",
+      "module_version": "1.24.1",
+      "available_providers": [
+        "OpenVINOExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "openvino": {
+      "version": "2025.4.1-20426-82bbf0292c5-releases/2025/4",
+      "devices": {
+        "CPU": {
+          "name": "Intel(R) Core(TM) Ultra 7 256V"
+        },
+        "GPU": {
+          "name": "Intel(R) Arc(TM) 140V GPU (8GB) (iGPU)"
+        },
+        "NPU": {
+          "name": "Intel(R) AI Boost",
+          "driver_version": "1005540"
+        }
+      }
+    },
+    "model": {
+      "path": "<repo>/models/vest_specialist.int8.onnx",
+      "bytes": 3498888,
+      "sha256": "ebffbee7b9bb662a620a2fd935d2726a5d7a2f4d4f8ffdaf4fa6916735db2004",
+      "opset": 17
+    }
+  }
+}

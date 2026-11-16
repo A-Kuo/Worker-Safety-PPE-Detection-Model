@@ -1,0 +1,227 @@
+{
+  "note": "Ranges are min..max of per-run percentiles. Single non-isolated machine: do not quote p99 as a guarantee.",
+  "processor": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "onnxruntime": "onnxruntime-openvino 1.24.1",
+  "openvino": "2025.4.1-20426-82bbf0292c5-releases/2025/4",
+  "devices": {
+    "CPU": {
+      "name": "Intel(R) Core(TM) Ultra 7 256V"
+    },
+    "GPU": {
+      "name": "Intel(R) Arc(TM) 140V GPU (8GB) (iGPU)"
+    },
+    "NPU": {
+      "name": "Intel(R) AI Boost",
+      "driver_version": "1005540"
+    }
+  },
+  "configs": {
+    "fp32_cpu": {
+      "runs": 1,
+      "iterations_per_run": 300,
+      "p50_ms": [
+        26.412,
+        26.412
+      ],
+      "p95_ms": [
+        31.127,
+        31.127
+      ],
+      "p99_ms": [
+        37.318,
+        37.318
+      ],
+      "preprocess_p50_ms": [
+        1.419,
+        1.419
+      ],
+      "infer_p50_ms": [
+        24.502,
+        24.502
+      ],
+      "postprocess_p50_ms": [
+        0.346,
+        0.346
+      ],
+      "strict_npu": false,
+      "model_sha256": "b641539a7c56036382e9418b3df7a3b3f107f62f2059b65f4d8356e77e1c96b4",
+      "files": [
+        "lunarlake_vest_fp32_cpu_run1.json"
+      ]
+    },
+    "fp32_igpu": {
+      "runs": 3,
+      "iterations_per_run": 300,
+      "p50_ms": [
+        5.089,
+        5.469
+      ],
+      "p95_ms": [
+        6.142,
+        6.445
+      ],
+      "p99_ms": [
+        6.587,
+        7.274
+      ],
+      "preprocess_p50_ms": [
+        1.322,
+        1.345
+      ],
+      "infer_p50_ms": [
+        3.108,
+        3.515
+      ],
+      "postprocess_p50_ms": [
+        0.315,
+        0.317
+      ],
+      "strict_npu": false,
+      "model_sha256": "b641539a7c56036382e9418b3df7a3b3f107f62f2059b65f4d8356e77e1c96b4",
+      "files": [
+        "lunarlake_vest_fp32_igpu_run1.json",
+        "lunarlake_vest_fp32_igpu_run2.json",
+        "lunarlake_vest_fp32_igpu_run3.json"
+      ]
+    },
+    "fp32_npu": {
+      "runs": 3,
+      "iterations_per_run": 300,
+      "p50_ms": [
+        6.229,
+        6.407
+      ],
+      "p95_ms": [
+        7.408,
+        9.036
+      ],
+      "p99_ms": [
+        8.082,
+        15.219
+      ],
+      "preprocess_p50_ms": [
+        1.331,
+        1.478
+      ],
+      "infer_p50_ms": [
+        4.197,
+        4.247
+      ],
+      "postprocess_p50_ms": [
+        0.325,
+        0.35
+      ],
+      "strict_npu": true,
+      "model_sha256": "b641539a7c56036382e9418b3df7a3b3f107f62f2059b65f4d8356e77e1c96b4",
+      "files": [
+        "lunarlake_vest_fp32_npu_run1.json",
+        "lunarlake_vest_fp32_npu_run2.json",
+        "lunarlake_vest_fp32_npu_run3.json"
+      ]
+    },
+    "int8_cpu": {
+      "runs": 1,
+      "iterations_per_run": 300,
+      "p50_ms": [
+        14.389,
+        14.389
+      ],
+      "p95_ms": [
+        16.22,
+        16.22
+      ],
+      "p99_ms": [
+        18.758,
+        18.758
+      ],
+      "preprocess_p50_ms": [
+        1.401,
+        1.401
+      ],
+      "infer_p50_ms": [
+        12.548,
+        12.548
+      ],
+      "postprocess_p50_ms": [
+        0.337,
+        0.337
+      ],
+      "strict_npu": false,
+      "model_sha256": "ebffbee7b9bb662a620a2fd935d2726a5d7a2f4d4f8ffdaf4fa6916735db2004",
+      "files": [
+        "lunarlake_vest_int8_cpu_run1.json"
+      ]
+    },
+    "int8_igpu": {
+      "runs": 3,
+      "iterations_per_run": 300,
+      "p50_ms": [
+        5.916,
+        6.158
+      ],
+      "p95_ms": [
+        6.814,
+        7.424
+      ],
+      "p99_ms": [
+        8.188,
+        11.42
+      ],
+      "preprocess_p50_ms": [
+        1.34,
+        1.357
+      ],
+      "infer_p50_ms": [
+        3.891,
+        4.169
+      ],
+      "postprocess_p50_ms": [
+        0.321,
+        0.323
+      ],
+      "strict_npu": false,
+      "model_sha256": "ebffbee7b9bb662a620a2fd935d2726a5d7a2f4d4f8ffdaf4fa6916735db2004",
+      "files": [
+        "lunarlake_vest_int8_igpu_run1.json",
+        "lunarlake_vest_int8_igpu_run2.json",
+        "lunarlake_vest_int8_igpu_run3.json"
+      ]
+    },
+    "int8_npu": {
+      "runs": 3,
+      "iterations_per_run": 300,
+      "p50_ms": [
+        4.252,
+        4.313
+      ],
+      "p95_ms": [
+        5.547,
+        5.682
+      ],
+      "p99_ms": [
+        6.058,
+        7.069
+      ],
+      "preprocess_p50_ms": [
+        1.302,
+        1.343
+      ],
+      "infer_p50_ms": [
+        2.556,
+        2.596
+      ],
+      "postprocess_p50_ms": [
+        0.31,
+        0.316
+      ],
+      "strict_npu": true,
+      "model_sha256": "ebffbee7b9bb662a620a2fd935d2726a5d7a2f4d4f8ffdaf4fa6916735db2004",
+      "files": [
+        "lunarlake_vest_int8_npu_run1.json",
+        "lunarlake_vest_int8_npu_run2.json",
+        "lunarlake_vest_int8_npu_run3.json"
+      ]
+    }
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "source": "<repo>/data/processed/vest_specialist/test/images/cmb_000135_jpg.rf.6e1ca5023ca4db07713e003f7986f8a0.jpg",
+  "source_frames": 1,
+  "iterations": 300,
+  "warmup": 20,
+  "latency_ms": {
+    "n": 300,
+    "mean": 14.627,
+    "min": 13.222,
+    "p50": 14.389,
+    "p90": 15.726,
+    "p95": 16.22,
+    "p99": 18.758,
+    "max": 27.072,
+    "std": 1.175
+  },
+  "fps_mean": 68.36,
+  "fps_from_p50": 69.5,
+  "fps_from_p95": 61.65,
+  "stages_ms": {
+    "preprocess_ms": {
+      "n": 300,
+      "mean": 1.49,
+      "min": 1.241,
+      "p50": 1.401,
+      "p90": 1.807,
+      "p95": 1.921,
+      "p99": 2.369,
+      "max": 3.408,
+      "std": 0.258
+    },
+    "infer_ms": {
+      "n": 300,
+      "mean": 12.751,
+      "min": 11.506,
+      "p50": 12.548,
+      "p90": 13.833,
+      "p95": 14.394,
+      "p99": 16.941,
+      "max": 23.295,
+      "std": 1.122
+    },
+    "postprocess_ms": {
+      "n": 300,
+      "mean": 0.357,
+      "min": 0.318,
+      "p50": 0.337,
+      "p90": 0.363,
+      "p95": 0.524,
+      "p99": 0.756,
+      "max": 1.015,
+      "std": 0.081
+    },
+    "merge_ms": {
+      "n": 300,
+      "mean": 0.003,
+      "min": 0.002,
+      "p50": 0.002,
+      "p90": 0.002,
+      "p95": 0.002,
+      "p99": 0.003,
+      "max": 0.208,
+      "std": 0.012
+    },
+    "total_ms": {
+      "n": 300,
+      "mean": 14.622,
+      "min": 13.217,
+      "p50": 14.384,
+      "p90": 15.722,
+      "p95": 16.215,
+      "p99": 18.754,
+      "max": 27.067,
+      "std": 1.175
+    }
+  },
+  "detections_total": 1200,
+  "backend": "onnxruntime",
+  "model": "<repo>/models/vest_specialist.int8.onnx",
+  "specialists": [],
+  "imgsz": 640,
+  "tag": "vest_int8_cpu_run1",
+  "strict_npu": false,
+  "providers_active": [
+    "OpenVINOExecutionProvider",
+    "CPUExecutionProvider"
+  ],
+  "openvino_device_type": "CPU",
+  "fingerprint": {
+    "python": "3.12.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "onnxruntime": {
+      "distribution": "onnxruntime-openvino",
+      "version": "1.24.1",
+      "module_version": "1.24.1",
+      "available_providers": [
+        "OpenVINOExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "openvino": {
+      "version": "2025.4.1-20426-82bbf0292c5-releases/2025/4",
+      "devices": {
+        "CPU": {
+          "name": "Intel(R) Core(TM) Ultra 7 256V"
+        },
+        "GPU": {
+          "name": "Intel(R) Arc(TM) 140V GPU (8GB) (iGPU)"
+        },
+        "NPU": {
+          "name": "Intel(R) AI Boost",
+          "driver_version": "1005540"
+        }
+      }
+    },
+    "model": {
+      "path": "<repo>/models/vest_specialist.int8.onnx",
+      "bytes": 3498888,
+      "sha256": "ebffbee7b9bb662a620a2fd935d2726a5d7a2f4d4f8ffdaf4fa6916735db2004",
+      "opset": 17
+    }
+  }
+}

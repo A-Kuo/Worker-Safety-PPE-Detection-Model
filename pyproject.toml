@@ -30,6 +30,8 @@ npu = ["onnxruntime-openvino>=1.19.0", "openvino>=2025.4,<2026"]
 train = ["torch", "ultralytics>=8.1.0", "roboflow", "requests"]
 # `ppe quantize` (plus one of cpu / npu).
 quant = ["onnx>=1.15.0", "onnxconverter-common>=1.14.0"]
+# Native live window (`ppe window`). Qt, because the core uses opencv-python-headless (no imshow).
+gui = ["PySide6>=6.6"]
 # FastAPI + Streamlit demo under app/ (source checkout only).
 app = ["fastapi", "uvicorn", "python-multipart", "streamlit"]
 dev = ["pytest", "onnx>=1.15.0", "build", "twine"]

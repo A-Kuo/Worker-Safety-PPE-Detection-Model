@@ -141,6 +141,10 @@ Caveats that matter when reading these:
 - The shipped specialist is the Kaggle GPU run (`EXP = "vest_specialist"` in `notebooks/train_colab_kaggle.ipynb`, weights `runs/train/vest_specialist/weights/best.pt`); its Kaggle test score (0.837 overall) was reproduced locally. The CPU run is kept at `runs/train/vest_specialist_cpu/`.
 - **Product bar.** Vest / no_vest still need **95%+ P and R**. The GPU specialist clears mAP but not the precision bar on `no_vest` (P≈0.67 / R≈0.72 on the clean test). Use `scripts/validate_accuracy.py` as the offline gate; next levers are threshold sweeps (`PPE_CLASS_CONF`) and more annotated `no_vest` data — not another 14-class fine-tune.
 
+### Shipped ONNX, runtime path (v0.1)
+
+The numbers above are Ultralytics validation of the Kaggle `.pt`. The file that ships is its ONNX export run through this package's decode and NMS, which scores slightly lower on `no_vest`: vest AP50 0.916, no_vest 0.711 on the same 145 clean images (249 / 43 boxes), identical on the NPU and iGPU. At confidence 0.30: vest P 0.897 R 0.879, no_vest P 0.648 R 0.814, with 95% intervals that exclude the 0.95 bar for both classes. Full tables, intervals, the three-way cross-check (`.pt` 0.756 -> ONNX 0.738 -> runtime 0.711 for no_vest) and the INT8 result are in [`MODEL_CARD.md`](MODEL_CARD.md); raw files are `results/analysis/eval_vest_*_clean_*.json` and `eval_vest_ultralytics_crosscheck.json`. `python scripts/validate_accuracy.py --report` prints them against the bars.
+
 ## Lifting `no_helmet` (helmet specialist)
 
 Same failure mode as vest: Combined under-annotates heads, so E0's `no_helmet` is weak (test mAP50 0.536, recall 0.598 under the subset protocol in the grid table). Fine-tuning the 14-class model on helmet-only images would forget vest / gloves / … the same way the vest fine-tune forgot helmet.
