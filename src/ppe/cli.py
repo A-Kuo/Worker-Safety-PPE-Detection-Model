@@ -3,6 +3,7 @@
 Examples (PowerShell — do not use angle brackets)::
 
     ppe providers
+    ppe fetch-model
     ppe export --weights runs/train/vest_specialist/weights/best.pt --out models/vest_specialist.onnx
     ppe quantize --model models/best.onnx
     ppe verify-npu --weights models/best.onnx --providers openvino
@@ -17,6 +18,30 @@ import json
 import sys
 import time
 from pathlib import Path
+
+
+CONF_HELP = (
+    "Detection threshold. Default: PPE_CONF, else the value registered for a released model "
+    "(0.30 for the vest models), else 0.25"
+)
+
+
+def _apply_model_defaults(session, args: argparse.Namespace) -> None:
+    """Use a released model's recommended threshold unless the user chose one (flag or PPE_CONF).
+
+    The model is recognised by its SHA-256, not its file name, so a renamed copy still gets the
+    right default and an unrelated file called ``vest_specialist.onnx`` does not.
+    """
+    import os
+
+    if getattr(args, "conf", None) is not None or os.environ.get("PPE_CONF", "").strip():
+        return
+    from ppe.models import recommended_conf
+
+    fingerprint = getattr(session.backend, "fingerprint", None) or {}
+    conf = recommended_conf((fingerprint.get("model") or {}).get("sha256"))
+    if conf is not None:
+        session.policy.conf = conf
 
 
 def _repo_root() -> Path:
@@ -106,6 +131,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
     root = _repo_root()
     policy = _policy_from_args(args)
     session = open_session(args.weights, policy=policy, repo_root=root)
+    _apply_model_defaults(session, args)
 
     source = args.source
     if not source:
@@ -201,10 +227,9 @@ def _policy_from_args(args: argparse.Namespace) -> "ExecutionPolicy":
 
     # Only override env when the flag was actually passed — empty --providers
     # must not wipe PPE_PROVIDERS / OpenVINO NPU pins from the environment.
-    overrides: dict = {
-        "imgsz": args.imgsz,
-        "conf": args.conf,
-    }
+    overrides: dict = {"imgsz": args.imgsz}
+    if getattr(args, "conf", None) is not None:
+        overrides["conf"] = args.conf  # otherwise PPE_CONF, the model's registered default, or 0.25
     if args.providers:
         overrides["providers"] = tuple(p.strip() for p in args.providers.split(",") if p.strip())
     if args.npu_only:
@@ -263,6 +288,7 @@ def cmd_predict(args: argparse.Namespace) -> int:
     root = _repo_root()
     policy = _policy_from_args(args)
     session = open_session(args.weights, policy=policy, repo_root=root)
+    _apply_model_defaults(session, args)
     src = Path(args.source)
     if not src.is_absolute():
         src = root / src
@@ -377,6 +403,7 @@ def cmd_window(args: argparse.Namespace) -> int:
     try:
         # Strict mode refuses here if the model cannot run entirely on the NPU: no silent CPU window.
         session = open_session(args.weights, policy=policy, repo_root=root)
+        _apply_model_defaults(session, args)
         source = open_source(spec, loop=args.loop, frames=frames)
     except RuntimeError as exc:
         raise SystemExit(f"ppe window: {exc}") from exc
@@ -401,12 +428,57 @@ def cmd_window(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_fetch_model(args: argparse.Namespace) -> int:
+    """Download a released model into the model directory and verify its SHA-256."""
+    from ppe import models
+    from ppe.paths import model_dir
+
+    table = models.entries()
+    if args.list:
+        rows = [
+            {"name": e.name, "file": e.file, "bytes": e.bytes, "sha256": e.sha256, "precision": e.precision,
+             "recommended_conf": e.conf, "default": e.name == models.default_name(), "description": e.description}
+            for e in table.values()
+        ]
+        print(json.dumps(rows, indent=2))
+        return 0
+    names = sorted(table) if args.all else [args.name or models.default_name()]
+    if args.url and len(names) != 1:
+        raise SystemExit("ppe fetch-model: --url applies to a single model")
+    dest = Path(args.dest).expanduser() if args.dest else model_dir()
+    for name in names:
+        try:
+            entry = models.get_entry(name)
+        except KeyError as exc:
+            raise SystemExit(f"ppe fetch-model: {exc.args[0]}") from exc
+        try:
+            path, downloaded = models.fetch(entry, dest, url=args.url, force=args.force)
+        except models.ModelVerificationError as exc:
+            raise SystemExit(f"ppe fetch-model: {exc}") from exc
+        except (OSError, ValueError) as exc:
+            raise SystemExit(
+                f"ppe fetch-model: could not download {entry.file} from {args.url or entry.url}: {exc}"
+            ) from exc
+        state = "downloaded and verified" if downloaded else "already present, verified"
+        print(f"{entry.name}: {path} ({state}, sha256 {entry.sha256[:16]}...)")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ppe", description="PPE edge inference CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("providers", help="List ORT execution providers and availability")
     p.set_defaults(func=cmd_providers)
+
+    p = sub.add_parser("fetch-model", help="Download a released model and verify its SHA-256")
+    p.add_argument("name", nargs="?", default=None, help="Model name (default: the registry default)")
+    p.add_argument("--all", action="store_true", help="Fetch every registered model")
+    p.add_argument("--list", action="store_true", help="List registered models and exit")
+    p.add_argument("--dest", type=Path, default=None, help="Target directory (default: PPE_MODEL_DIR or ~/.ppe/models)")
+    p.add_argument("--url", type=str, default=None, help="Download from this URL instead (hash still enforced)")
+    p.add_argument("--force", action="store_true", help="Download even if a verified copy exists")
+    p.set_defaults(func=cmd_fetch_model)
 
     p = sub.add_parser("export", help="Export YOLO weights to ONNX (static shapes by default)")
     p.add_argument("--weights", type=Path, default=None)
@@ -454,7 +526,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma list of class-pair specialist ONNX/.pt paths (vest and/or helmet)",
     )
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--conf", type=float, default=0.25)
+    p.add_argument("--conf", type=float, default=None, help=CONF_HELP)
     p.add_argument("--warmup", type=int, default=20, help="Untimed runs (NPU compile/autotune)")
     p.add_argument("--iterations", type=int, default=300, help="Timed predictions (frames are cycled)")
     p.add_argument("--max-frames", type=int, default=100, help="Max frames read from a video source")
@@ -478,7 +550,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Diagnose without strict enforcement: list CPU-resident ops instead of refusing",
     )
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--conf", type=float, default=0.25)
+    p.add_argument("--conf", type=float, default=None, help=CONF_HELP)
     p.add_argument("--runs", type=int, default=3, help="Profiled inferences on a zero tensor")
     p.add_argument("--out", type=Path, default=None, help="Write the JSON report here")
     p.set_defaults(func=cmd_verify_npu)
@@ -512,7 +584,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--openvino-device", type=str, default="")
     p.add_argument("--specialists", type=str, default="")
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--conf", type=float, default=0.30, help="Detection threshold (+/- keys change it live)")
+    p.add_argument("--conf", type=float, default=None, help=CONF_HELP + " (+/- keys change it live)")
     p.add_argument("--loop", action="store_true", help="Restart a video file when it ends")
     p.add_argument("--record", type=Path, default=None, help="Save the annotated stream to this .mp4")
     p.add_argument("--snapshot", type=Path, default=None, help="Save the last displayed frame (with HUD) as an image")
@@ -542,7 +614,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma list of class-pair specialist ONNX/.pt paths (vest and/or helmet)",
     )
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--conf", type=float, default=0.25)
+    p.add_argument("--conf", type=float, default=None, help=CONF_HELP)
     p.set_defaults(func=cmd_predict)
 
     return parser

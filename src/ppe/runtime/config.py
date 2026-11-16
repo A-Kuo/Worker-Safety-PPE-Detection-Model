@@ -174,7 +174,7 @@ def resolve_model_path(
         if cand.is_file():
             return cand
     raise FileNotFoundError(
-        "No model found. Pass --weights path/to/model.onnx, or put vest_specialist.onnx in "
+        "No model found. Run `ppe fetch-model`, pass --weights path/to/model.onnx, or put vest_specialist.onnx in "
         f"{root / 'models'} or {model_dir()} (override with PPE_MODEL_DIR)."
     )
 

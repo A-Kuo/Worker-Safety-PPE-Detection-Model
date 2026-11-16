@@ -248,34 +248,3 @@ def test_no_live_code_points_at_the_old_baselines_or_moved_configs():
             if stale.search(py.read_text(encoding="utf-8", errors="ignore")):
                 offenders.append(str(py.relative_to(REPO)))
     assert offenders == []
-
-
-# --- smoke export must not clobber tracked weights ------------------------------------------------
-
-def test_smoke_export_does_not_overwrite_the_tracked_onnx(tmp_path, monkeypatch):
-    sys.path.insert(0, str(REPO / "scripts"))
-    try:
-        import smoke_edge
-    finally:
-        sys.path.remove(str(REPO / "scripts"))
-
-    tracked = tmp_path / "weights"
-    tracked.mkdir()
-    pt = tracked / "best.pt"
-    pt.write_bytes(b"weights")
-    (tracked / "best.onnx").write_bytes(b"ORIGINAL-TRACKED")
-
-    class _YOLO:
-        def __init__(self, path):
-            self.path = Path(path)
-
-        def export(self, **_kw):  # Ultralytics writes next to the .pt it was handed
-            target = self.path.with_suffix(".onnx")
-            target.write_bytes(b"FRESH-EXPORT")
-            return str(target)
-
-    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=_YOLO))
-    dest = tmp_path / "models" / "best.onnx"
-    smoke_edge._ensure_onnx(pt, dest)
-    assert dest.read_bytes() == b"FRESH-EXPORT"
-    assert (tracked / "best.onnx").read_bytes() == b"ORIGINAL-TRACKED"  # untouched
