@@ -304,7 +304,7 @@ def test_workflows_are_valid_yaml_and_use_the_torch_free_path():
     yaml = pytest.importorskip("yaml")
     wf = REPO / ".github" / "workflows"
     ci = yaml.safe_load((wf / "ci.yml").read_text(encoding="utf-8"))
-    assert set(ci["jobs"]) == {"runtime", "gui", "train"}
+    assert set(ci["jobs"]) == {"runtime", "gui", "train", "native"}
     matrix = ci["jobs"]["runtime"]["strategy"]["matrix"]
     assert matrix["python-version"] == ["3.10", "3.11", "3.12"]
     assert {"os": "windows-latest", "python-version": "3.12"} in matrix["include"]

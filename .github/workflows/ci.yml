@@ -101,3 +101,23 @@ jobs:
           python -m pip install -r requirements.txt
       - name: Tests (nothing skipped for missing torch)
         run: python -m pytest -q -rs
+
+  # Experimental native port (native/ppe-core): dependency-free Rust, parity-tested against the
+  # Python decode through generated fixtures. Not part of the released package.
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Fixtures match the Python runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[cpu]"
+          python scripts/gen_native_fixtures.py --check
+      - name: cargo test
+        working-directory: native/ppe-core
+        run: cargo test
