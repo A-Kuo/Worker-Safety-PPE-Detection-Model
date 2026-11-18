@@ -1,0 +1,16 @@
+[package]
+name = "ppe-core"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.77"
+description = "Experimental native port of the PPE detector's post-processing (decode + NMS). Incomplete."
+license = "AGPL-3.0-only"
+publish = false
+
+# Deliberately no dependencies: the experiment is about the hot path, and a zero-dependency crate
+# builds offline and keeps the comparison with the Python runtime honest.
+[dependencies]
+
+[lib]
+name = "ppe_core"
+path = "src/lib.rs"

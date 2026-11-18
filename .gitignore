@@ -48,3 +48,7 @@ models/*.onnx
 Thumbs.db
 .idea/
 .vscode/
+
+# Rust build output (experimental native port); the crate has no dependencies, so no lockfile
+native/**/target/
+native/**/Cargo.lock
